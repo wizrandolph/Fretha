@@ -1,0 +1,227 @@
+QMainWindow {
+    background-color: #262626;
+}
+QMainWindow::title {
+    color: #FFFFFF;
+    background-color: #222222;
+}
+QMainWindow::titlebar {
+    background-color: #222222;
+}
+QPushButton {
+    color: #ffffff;
+    background-color: #333333;
+    border: 2px solid #555555;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: MiSans;
+    font-size: 16px;
+}
+QPushButton:hover {
+    background-color: #555555;
+    border: 2px solid #45aaf2;
+}
+QPushButton:checked, QPushButton:pressed {
+    background-color: #666666;
+    color: #ffffff;
+}
+QComboBox {
+    color: #ffffff;
+    border: 2px solid #555555;
+    background-color: #333333;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: MiSans;
+    font-size: 16px;
+}
+QComboBox::drop-down {
+    border: none;
+    outline: none;
+    width: 0px;
+    height: 0px;
+}
+QComboBox QAbstractItemView {
+    border: 2px solid #555555;
+    border-radius: 10px;
+    background-color: #333333;
+    color: #ffffff;
+    height: 50px;
+    selection-background-color: #45aaf2;
+    selection-color: #ffffff;
+}
+QLineEdit {
+    border: 2px solid #555555;
+    background-color: #333333;
+    font-family: MiSans;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 16px;
+    color: #ffffff;
+}
+QLineEdit:hover, QLineEdit:focus {
+    border: 2px solid #45aaf2;
+}
+QDoubleSpinBox, QSpinBox {
+    border: 2px solid #555555;
+    font-family: MiSans;
+    border-radius: 10px;
+    background-color: #333333;
+    padding: 10px 16px;
+    font-size: 16px;
+    color: #ffffff;
+}
+QDoubleSpinBox:hover, QDoubleSpinBox:focus, QSpinBox:hover, QSpinBox:focus {
+    border: 2px solid #45aaf2;
+}
+QLabel {
+    border: 0px solid #45aaf2;
+    font-size: 16px;
+    font-family: MiSans;
+    color: #ffffff;
+}
+QTableView {
+    background-color: #222222;
+    border: 2px solid #555555;
+    border-radius: 10px;
+    font-family: MiSans;
+    font-size: 16px;
+    color: #ffffff;
+    selection-background-color: #45aaf2;
+    selection-color: #ffffff;
+}
+QHeaderView {
+    background-color: #222222;
+    border: 2px solid #555555;
+    border-radius: 8px;
+    font-family: MiSans;
+    font-size: 16px;
+    color: #ffffff;
+    padding: 5px;
+}
+QHeaderView::section:horizontal {
+    border-radius: 6px;
+    background-color: #333333;
+    border: 2px solid #555555;
+    font-family: MiSans;
+    font-size: 16px;
+    color: #ffffff;
+}
+QHeaderView::section:vertical {
+    border-radius: 6px;
+    background-color: #333333;
+    border: 2px solid #555555;
+    font-family: MiSans;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+QScrollArea {
+    background-color: #222222;
+    color: #222222;
+    border: 2px solid #555555;
+}
+
+QProgressBar {
+    background-color: #111111;
+    color: #ffffff;
+    border: 2px solid #555555;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 16px;
+    font-family: MiSans;
+    height: 30px;
+}
+QProgressBar::chunk {
+    background-color: #45aaf2;
+    margin: 1px;
+    border-radius: 8px;
+}
+
+QScrollBar:horizontal {
+    border: 2px solid #555555;
+    background: #222222;
+    height: 30px;
+    margin: 2px 22px 2px 22px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #45aaf2;
+    min-width: 20px;
+}
+
+QScrollBar::add-line:horizontal {
+    border: 2px solid grey;
+    background: #222222;
+    width: 20px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal {
+    border: 2px solid grey;
+    background: #222222;
+    width: 20px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
+
+QScrollBar:left-arrow:horizontal,
+QScrollBar::right-arrow:horizontal {
+    border: 2px solid grey;
+    width: 3px;
+    height: 3px;
+    background: white;
+}
+
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: none;
+}
+
+QScrollBar:vertical {
+    border: 2px solid #555555;
+    background: #222222;
+    width: 30px;
+    margin: 22px 2px 22px 2px;
+}
+
+QScrollBar::handle:vertical {
+    background: #45aaf2;
+    min-width: 20px;
+}
+
+QScrollBar::add-line:vertical {
+    border: 2px solid grey;
+    background: #222222;
+    height: 20px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+    border: 2px solid grey;
+    background: #222222;
+    height: 20px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+
+QScrollBar:up-arrow:vertical,
+QScrollBar::down-arrow:vertical {
+    border: 2px solid grey;
+    width: 3px;
+    height: 3px;
+    background: white;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: none;
+}
+QChartView {
+    background-color: #222222;
+    border-radius: 10px;
+}
+QFrame {
+    border: 2px solid #555555;
+    border-radius: 10px;
+    background-color: #222222;
+};
