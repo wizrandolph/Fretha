@@ -35,9 +35,9 @@ enum ChartName
     EaDfreeBin
 };
 
-enum Channel2Show
+enum ShowType
 {
-    MERGE,
+    MERGED,
     AANORM,
     DANORM,
     DDNORM,
@@ -63,12 +63,11 @@ enum DrawMode {
     CropMode, StampMode
 };
 
-
 class Enumerator
 {
 public:
     Enumerator();
-    static ChannelName channel2ShowToChannelName(Channel2Show channel2Show);
+    static ChannelName showTypeToChannelName(ShowType showType);
     static QString chartNameToQString(ChartName chartName);
 };
 

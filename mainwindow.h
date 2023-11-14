@@ -9,6 +9,7 @@
 #include <fretimageprocessor.h>
 #include <fretthasolver.h>
 #include <wizgraphicsview.h>
+#include <wizshortcut.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -26,22 +27,20 @@ public:
 private:
 
     QSettings *m_setting;   // 配置文件
-    QString tmpDirPath = QCoreApplication::applicationDirPath();    // 程序运行的目录
+    QString m_tmpDirPath = QCoreApplication::applicationDirPath();    // 程序运行的目录
     QDialog *m_dialog;    // 警告对话框
-    QString savePath;   // 保存目录，一般为 strPath + "/THAResult"
-    QString globalPath;    // 总文件夹的完整绝对路径，其下包含多个FRET共定位视野
+    QString m_savePath;   // 保存目录，一般为 strPath + "/THAResult"
+    QString m_globalPath;    // 总文件夹的完整绝对路径，其下包含多个FRET共定位视野
     QString currentViewName;
+    int m_currentPageIndex;
 
     FretCalculator *fretCalculator = new FretCalculator();
     FretImageProcessor *fretImageProcessor = new FretImageProcessor();
     FretThaSolver *fretThaSolver = new FretThaSolver();
 
-    /*用于圈点的内部成员*/
-    QStandardItemModel *modelR = new QStandardItemModel;
-    // XLabel *xlabel; // 支持圈点功能的QLabel类
-    QImage image2Show;
+    QImage m_image2Show;
     QString dir2Show; // 当前显示图片的视野的完整绝对路径
-    Channel2Show channel2Show;  // 当前要显示的通道
+    ShowType m_showType;  // 当前要显示的通道
 
     //图表
     QChartView *m_chartView[6];
@@ -87,6 +86,10 @@ private:
     void drawLine(QChartView* chartView, QString seriesName, const std::vector<double> xData, const std::vector<double> yData);
     void setupChartAxis(QChartView *chartView, const QString &xAxisLabel, qreal xAxisMin, qreal xAxisMax, const QString &yAxisLabel, qreal yAxisMin, qreal yAxisMax);
 
+    void updateRectRecorded(QString viewPath);
+
+    void setupShortcuts();
+
 
 private slots:
     void on_pushButtonBrowse_clicked();
@@ -112,7 +115,5 @@ private slots:
 
     void comboBoxViewTypeChanged(int index);
     void comboBoxDrawModeChanged(int index);
-
-
 };
 #endif // MAINWINDOW_H

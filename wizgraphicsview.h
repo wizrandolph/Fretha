@@ -27,6 +27,8 @@ public:
     QRectF getRect();
     void setRect(QRectF);
     void setDrawMode(DrawMode);
+    void addItem(QRectF);
+    void removeItem(QRectF);
 
 protected:
     // 设置鼠标事件
@@ -37,6 +39,7 @@ protected:
 private:
     QGraphicsScene *m_scene;
     QGraphicsRectItem *m_rectItem;
+    QList<QGraphicsRectItem*> m_rectItemsList;
     QPointF m_pressStartPosition;
 
     bool m_pressed = false; // 鼠标按下状态
@@ -58,7 +61,10 @@ private:
     void itemToRect();
     bool isPointNearSide(const int _sideCoordinate, const int _pointCoordinate);
     bool isPointOutsideRect(const QRectF& _rect, const QPointF& _point);
-    QRectF correctQRectF(QRectF& rect);
+    void correctQRectF(QRectF& rect);
+    void correctRectInsideScene(QRectF& rect);
+    void correctPointInsideScene(QPointF& point);
+    void clearRectItemList();
 signals:
     void mouseReleased(QRectF);
 };

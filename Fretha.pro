@@ -59,7 +59,8 @@ SOURCES += \
     TwoHybridSolver/xzgeqp3.cpp \
     TwoHybridSolver/xzlarf.cpp \
     TwoHybridSolver/xzlarfg.cpp \
-    wizgraphicsview.cpp
+    wizgraphicsview.cpp \
+    wizshortcut.cpp
 
 HEADERS += \
     enumerator.h \
@@ -119,7 +120,8 @@ HEADERS += \
     TwoHybridSolver/xzgeqp3.h \
     TwoHybridSolver/xzlarf.h \
     TwoHybridSolver/xzlarfg.h \
-    wizgraphicsview.h
+    wizgraphicsview.h \
+    wizshortcut.h
 
 FORMS += \
     mainwindow.ui

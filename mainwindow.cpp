@@ -82,7 +82,7 @@ void MainWindow::on_pushButtonAuto_clicked()
         return;
     }
 
-    savePath = strPath + "/THA_Result";
+    m_savePath = strPath + "\\THA_Result";
     fretThaSolver->setBatchPath(strPath);
     showProgressDialog("请等待数据处理...");
     connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
@@ -163,7 +163,7 @@ void MainWindow::on_pushButtonSave_clicked()
     // 使用弹窗获取保存文件夹路径
     QString folderPath = getSaveFolderPath(this);
     QString filePath = fretThaSolver->outputData(folderPath);   // 保存后台数据
-    savePath = folderPath;
+    m_savePath = folderPath;
 
     // 保存图表文件
     QString filename[6] = {"Ed-Rad图.png",
@@ -285,19 +285,20 @@ void MainWindow::on_pushButtonSetRatio_clicked()
 void MainWindow::on_pushButtonManu_clicked()
 {
 
-    // 【检查目录是否正确】
-    globalPath = ui->lineEditPath->text();
-    qDebug() << globalPath;
-    if (!checkPathLegal(globalPath)) return;
+    // 检查目录是否正确
+    m_globalPath = ui->lineEditPath->text();
+    qDebug() << m_globalPath;
+    if (!checkPathLegal(m_globalPath)) return;
 
-    initViewTableModel(globalPath);
+    initViewTableModel(m_globalPath);
     initRecordTableModel();
     updateStatusBar(ui->graphicsView->getRect());
 
-    // 【页面跳转】
-    ui->stackedWidget->setCurrentIndex(3);
-    // 全屏
-    showMaximized();
+    // 设置快捷键
+    setupShortcuts();
+
+    ui->stackedWidget->setCurrentIndex(3);    // 页面跳转
+    showMaximized();    // 全屏
 }
 
 void MainWindow::loadLastRatio()
@@ -385,34 +386,33 @@ void MainWindow::loadLastRatio()
 }
 
 // 一个简单的由自定义的channel_name映射到QString的函数
-QString getChannelNameString(Channel2Show channel)
+QString getChannelNameString(ShowType type)
 {
     QString channelName;
-    switch (channel)
-    {
-    case AANORM:{
-        channelName = "AA.tif";
-        break;
-    }
-    case DANORM:{
-        channelName = "DA.tif";
-        break;
-    }
-    case DDNORM:{
-        channelName = "DD.tif";
-        break;
-    }
-    default:{
-        break;
-    }
+    switch (type) {
+        case AANORM: {
+            channelName = "AA.tif";
+            break;
+        }
+        case DANORM: {
+            channelName = "DA.tif";
+            break;
+        }
+        case DDNORM: {
+            channelName = "DD.tif";
+            break;
+        }
+        default: {
+            break;
+        }
     }
     return channelName;
 }
 
 void MainWindow::updateGraphicsView()
 {
-    image2Show = getImageToShow();
-    ui->graphicsView->setImage(image2Show);
+    m_image2Show = getImageToShow();
+    ui->graphicsView->setImage(m_image2Show);
 }
 
 bool MainWindow::checkPathLegal(QString path)
@@ -428,18 +428,25 @@ bool MainWindow::checkPathLegal(QString path)
 
 void MainWindow::on_pushButtonAdd_clicked()
 {
-    /*获取ROI信息*/
+    QStandardItemModel *model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
+    if (model == nullptr) {
+        qDebug() << "[Add data]:\tModel Not Found";
+        return;
+    }
+
+    // 获取ROI
     QRectF rectf = ui->graphicsView->getRect();
+    ui->graphicsView->addItem(rectf);   // 记录到图形场景中
     int x, y, w, h;
     x = rectf.x();
     y = rectf.y();
     w = rectf.width();
     h = rectf.height();
-    int cnt = modelR->rowCount();
+    int cnt = model->rowCount();
 
     double foreGround[3];
 
-    /*获取灰度值*/
+    // 获取灰度值
     for (int i = 0; i < 3; ++ i)
     {
         fretImageProcessor->setRoi(x, y, w, h);
@@ -456,36 +463,31 @@ void MainWindow::on_pushButtonAdd_clicked()
 
     int columnIndex = 0;
     // 如果能够完成数据的计算，那么会向结果列表中添加当前数据
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[AA])));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DA])));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DD])));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEd)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valRad)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEa)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valRda)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valAest)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valDest)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(x)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(y)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(w)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(h)));
-    modelR->setItem(cnt, columnIndex ++, new QStandardItem(currentViewName));
-    modelR->setRowCount(cnt + 1);
-//    else
-//    {
-//        // 否则弹出提示弹窗
-//        showAlertDialog("自动计算数据异常！当前数据无效。");
-//    }
 
-    // 【设置表格格式】
-    // 获取水平表头对象
-    QHeaderView *headerR = ui->tableRecord->horizontalHeader();
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[AA])));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DA])));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DD])));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEd)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valRad)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEa)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valRda)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valAest)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valDest)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(x)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(y)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(w)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(h)));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(currentViewName));
+    model->setRowCount(cnt + 1);
+
+
+    // 设置表格格式
+    QHeaderView *headerR = ui->tableRecord->horizontalHeader(); // 获取水平表头对象
     // 将表头的调整模式设置为ResizeToContents
     headerR->setSectionResizeMode(QHeaderView::ResizeToContents);
     // 自动调整所有列的宽度以适应内容
     ui->tableRecord->resizeColumnsToContents();
     ui->tableRecord->scrollToBottom();
-
 }
 
 void MainWindow::exportToCSV(const QTableView* tableView, const QString& filePath)
@@ -586,6 +588,7 @@ void MainWindow::initRecordTableModel()
         qDebug() << "表头数量不匹配";
         return;
     }
+    QStandardItemModel *modelR = new QStandardItemModel(this);
     modelR->clear();
     modelR->setColumnCount(columnCount);
     ui->tableRecord->setModel(modelR);
@@ -622,7 +625,7 @@ void MainWindow::initViewTableModel(QString batchPath)
     {
         // 添加数据
         QString completeness;
-        if (checkChannelImages(globalPath + "/" + subfolder)) completeness = "FRET";
+        if (checkChannelImages(m_globalPath + "/" + subfolder)) completeness = "FRET";
         else completeness = "Others";
         model->setItem(cnt, 0, new QStandardItem(subfolder));
         model->setItem(cnt, 1, new QStandardItem(completeness));
@@ -631,14 +634,7 @@ void MainWindow::initViewTableModel(QString batchPath)
         // 同时寻找第一个为FRET视野的子文件夹选中
         if (!flag && completeness == "FRET")
         {
-//            dir2Show = globalPath + "\\" + subfolder;
-//            currentViewName = subfolder;
-//            fretImageProcessor->loadSourceData(dir2Show);
-//            updateGraphicsView();
-//            flag = true;
-//            model->setItem(cnt, 2, new QStandardItem("Editing"));
-
-            channel2Show = MERGE;
+            m_showType = MERGED;
 
             QModelIndex index = model->index(cnt, 0);
             changeView(index);
@@ -647,9 +643,9 @@ void MainWindow::initViewTableModel(QString batchPath)
         cnt ++ ;
     }
 
-    // 【设置表格的点击行为】
-    // 设置表格只能点击不能进入编辑状态
-    ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    // 设置表格的点击行为
+
+    ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);    // 设置表格只能点击不能进入编辑状态
     // 设置选择模式为单选模式，且只能选择整行
     ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -659,9 +655,6 @@ void MainWindow::initViewTableModel(QString batchPath)
     QHeaderView *header = ui->tableView->horizontalHeader();    // 获得表头
     header->setSectionResizeMode(QHeaderView::ResizeToContents);    // 将表头的调整模式设置为ResizeToContents
     ui->tableView->resizeColumnsToContents();   // 自动调整所有列的宽度以适应内容
-
-    // 初始数据表格
-    initRecordTableModel();
 }
 
 void MainWindow::showAlertDialog(QString info)
@@ -735,40 +728,39 @@ void MainWindow::showProgressDialog(QString info)
 
 void MainWindow::on_pushButtonCalc_clicked()
 {
-    // solver->clearData();
+    // 清除数据
     fretThaSolver->clearFretData();
     fretThaSolver->clearFretDataBin();
 
-    for (int i = 0; i < modelR->rowCount(); ++ i)
+    QStandardItemModel *model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
+    if (model == nullptr) return;
+
+    for (int i = 0; i < model->rowCount(); ++ i)
     {
-        QModelIndex index = modelR->index(i, 3);
-        QVariant data = modelR->data(index);
+        QModelIndex index = model->index(i, 3);
+        QVariant data = model->data(index);
         double valEd = data.toDouble();
-        index = modelR->index(i, 4);
-        data = modelR->data(index);
+        index = model->index(i, 4);
+        data = model->data(index);
         double valRad = data.toDouble();
-        index = modelR->index(i, 5);
-        data = modelR->data(index);
+        index = model->index(i, 5);
+        data = model->data(index);
         double valEa= data.toDouble();
-        index = modelR->index(i, 6);
-        data = modelR->data(index);
+        index = model->index(i, 6);
+        data = model->data(index);
         double valRda = data.toDouble();
-        index = modelR->index(i, 7);
-        data = modelR->data(index);
+        index = model->index(i, 7);
+        data = model->data(index);
         double valAest = data.toDouble();
-        index = modelR->index(i, 8);
-        data = modelR->data(index);
+        index = model->index(i, 8);
+        data = model->data(index);
         double valDest= data.toDouble();
 
         fretThaSolver->expandFretData(valEd, valEa, valRad, valRda, valAest, valDest);
     }
 
-    savePath = globalPath + "\\THA_Result";
+    m_savePath = m_globalPath + "\\THA_Result";
 
-
-//    solver->solveTHAER();
-//    solver->solveTHA();
-//    solver->solveTHABIN(0, 5, 0.1);
     fretThaSolver->performTwoHybridMatlab();
     fretThaSolver->performTwoHybridMatlabBin(0, 5, 0.1);
     fretThaSolver->performTwoHybridLinear();
@@ -789,9 +781,15 @@ void MainWindow::on_pushButtonCalc_clicked()
 
 void MainWindow::on_pushButtonBack_clicked()
 {
+    QStandardItemModel *model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
+    if (model == nullptr) {
+        qDebug() << "[Exit Manually Draw]:\tModel Not Found";
+        return;
+    } else {
+        // 清空数据
+        model->clear();
+    }
 
-    // 清空数据
-    modelR->clear();
     fretCalculator->resetData();
 
     // 页面跳转
@@ -803,12 +801,18 @@ void MainWindow::on_pushButtonBack_clicked()
 
 void MainWindow::on_pushButtonImportScreen_clicked()
 {
+    QStandardItemModel *model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
+    if (model == nullptr) {
+        qDebug() << "[Exit Manually Draw]:\tModel Not Found";
+        return;
+    }
+
     // 非测试
     QString csvPath = getOpenCsvFilePath();
 
 
     initRecordTableModel();
-    int cnt = modelR->rowCount();
+    int cnt = model->rowCount();
 
     QFile file(csvPath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -827,9 +831,9 @@ void MainWindow::on_pushButtonImportScreen_clicked()
             int i = 1;
             for (; i < fields.size(); ++ i)
             {
-                modelR->setItem(cnt, columnIndex ++, new QStandardItem(fields.at(i)));
+                model->setItem(cnt, columnIndex ++, new QStandardItem(fields.at(i)));
             }
-            modelR->setRowCount(++ cnt);
+            model->setRowCount(++ cnt);
         }
         isHeader = false;
     }
@@ -845,9 +849,25 @@ void MainWindow::on_pushButtonImportScreen_clicked()
 void MainWindow::on_pushButtonDelete_clicked()
 {
     QModelIndexList selectedRows = ui->tableRecord->selectionModel()->selectedRows();
+
     if (selectedRows.size() > 0) {
+
         int row = selectedRows.at(0).row();
-        modelR->removeRow(row);
+
+        QModelIndex leftIndex = ui->tableRecord->model()->index(row, 9);
+        QModelIndex topIndex = ui->tableRecord->model()->index(row, 10);
+        QModelIndex widthIndex = ui->tableRecord->model()->index(row, 11);
+        QModelIndex heightIndex = ui->tableRecord->model()->index(row, 12);
+        int left = (leftIndex.data().toString()).toInt();
+        int top = (topIndex.data().toString()).toInt();
+        int width = (widthIndex.data().toString()).toInt();
+        int height = (heightIndex.data().toString()).toInt();
+
+        QRectF rect = QRectF(left, top, width, height);
+        qDebug() << "[Delete Data]:\t" << rect;
+        ui->graphicsView->removeItem(rect);
+
+        ui->tableRecord->model()->removeRow(row);
     }
 }
 
@@ -856,27 +876,27 @@ void MainWindow::comboBoxViewTypeChanged(int index)
 
     switch (index) {
         case 0: {
-            channel2Show = MERGE;
+            m_showType = MERGED;
             break;
         }
         case 1: {
-            channel2Show = AANORM;
+            m_showType = AANORM;
             break;
         }
         case 2: {
-            channel2Show = DANORM;
+            m_showType = DANORM;
             break;
         }
         case 3: {
-            channel2Show = DDNORM;
+            m_showType = DDNORM;
             break;
         }
         case 4: {
-            channel2Show = EDPSEU;
+            m_showType = EDPSEU;
             break;
         }
         case 5: {
-            channel2Show = RCPSEU;
+            m_showType = RCPSEU;
             break;
         }
         default: {
@@ -910,8 +930,8 @@ QImage MainWindow::getImageToShow()
     cv::Mat cvImage;
     QImage qtImage;
 
-    switch (channel2Show){
-    case MERGE: {
+    switch (m_showType){
+    case MERGED: {
         cvImage= fretImageProcessor->getMergedImage();
         break;
     }
@@ -928,7 +948,7 @@ QImage MainWindow::getImageToShow()
         break;
     }
     default: {
-        ChannelName channelName = Enumerator::channel2ShowToChannelName(channel2Show);
+        ChannelName channelName = Enumerator::showTypeToChannelName(m_showType);
         if (channelName != NaC)
         {
             cvImage = fretImageProcessor->getNormalizedImage(channelName);
@@ -940,10 +960,10 @@ QImage MainWindow::getImageToShow()
     if (cvImage.empty())
     {
         qDebug() << "当前用于显示的图片出现问腿";
-        return image2Show;
+        return m_image2Show;
     }
 
-    QString tmpFilePath = tmpDirPath + "\\tmp.jpg";
+    QString tmpFilePath = m_tmpDirPath + "\\tmp.jpg";
     cv::imwrite(tmpFilePath.toStdString(), cvImage);
     qtImage = QImage(tmpFilePath);
 
@@ -975,12 +995,16 @@ void MainWindow::changeView(QModelIndex &index)
         // 切换为视野的图片内容
         QString viewPath = ui->tableView->model()->index(row, 0).data().toString();
 
-        dir2Show = globalPath + "\\" + viewPath;
+        dir2Show = m_globalPath + "\\" + viewPath;
         currentViewName = viewPath;
         qDebug() << "切换视野:\t" << dir2Show;
         fretImageProcessor->loadSourceData(dir2Show);
         updateGraphicsView();
+
+        updateRectRecorded(viewPath);
     }
+
+
 }
 
 void MainWindow::trackRect(QModelIndex &index)
@@ -993,12 +1017,14 @@ void MainWindow::trackRect(QModelIndex &index)
     QModelIndex widthIndex = ui->tableRecord->model()->index(row, 11);
     QModelIndex heightIndex = ui->tableRecord->model()->index(row, 12);
 
+
     int left = (leftIndex.data().toString()).toInt();
     int top = (topIndex.data().toString()).toInt();
     int width = (widthIndex.data().toString()).toInt();
     int height = (heightIndex.data().toString()).toInt();
 
     QString viewName = viewNameIndex.data().toString();
+
     int targetRow = -1;
 
     QAbstractItemModel *model = ui->tableView->model();
@@ -1021,19 +1047,15 @@ void MainWindow::trackRect(QModelIndex &index)
 
     QModelIndex targetIndex = model->index(targetRow, 0); // 目标行索引
 
-//    QItemSelectionModel *selectionModel = ui->tableView->selectionModel();
-//    if (selectionModel) {
-//        QItemSelection selection(index, index.sibling(index.row(), model->columnCount() - 1)); // 范围：当前行的第一列到最后一列
-
-//        QItemSelectionModel::SelectionFlags flags = QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows;
-//        // selectionModel->select(selection, flags);
-//    }
-
     QRectF roi(left, top, width, height);
 
-    changeView(targetIndex);
+    if (currentViewName != viewName) {
+        changeView(targetIndex);
+    }
+
     ui->tableView->selectRow(targetRow);
     ui->graphicsView->setRect(roi);
+    updateStatusBar(roi);
 
 }
 
@@ -1070,6 +1092,9 @@ void MainWindow::initAllCharts()
     }
 }
 
+/**
+ * @brief MainWindow::updateResultInterface 更新结果到界面
+ */
 void MainWindow::updateResultInterface()
 {
     // 更新THA的结果
@@ -1131,6 +1156,9 @@ void MainWindow::updateThaCharts()
     setupChartAxis(m_chartView[EdAfree], "Afree", 0, maxAfree * 1.1, "Ed", 0, maxEd * 1.1);
     setupChartAxis(m_chartView[EaDfree], "Dfree", 0, maxDfree * 1.1, "Ea", 0, maxEa * 1.1);
 }
+/**
+ * @brief MainWindow::updateThaBinCharts 更新数据分箱界面的图表
+ */
 void MainWindow::updateThaBinCharts()
 {
     // 清空图标中的数据
@@ -1169,6 +1197,9 @@ void MainWindow::updateThaBinCharts()
     setupChartAxis(m_chartView[EdAfreeBin], "Afree", 0, maxAfree * 1.1, "Ed", 0, maxEd * 1.1);
     setupChartAxis(m_chartView[EaDfreeBin], "Dfree", 0, maxDfree * 1.1, "Ea", 0, maxEa * 1.1);
 }
+/**
+ * @brief MainWindow::updateEdRcCharts 更新Ed-RC图
+ */
 void MainWindow::updateEdRcCharts()
 {
     // 清空图标中的数据
@@ -1224,7 +1255,7 @@ void MainWindow::updateEdRcCharts()
 }
 /**
  * @brief MainWindow::initializeChart 初始化图表
- * @param chartView ChartView 的指针
+ * @param chartView ChartView指针
  * @param chartName 图表的名字
  */
 void MainWindow::initializeChart(QChartView* chartView, QString chartName)
@@ -1252,7 +1283,7 @@ void MainWindow::initializeChart(QChartView* chartView, QString chartName)
 
 /**
  * @brief MainWindow::clearChart 清除图表中的数据和坐标轴
- * @param chartView
+ * @param chartView ChartView指针
  */
 void MainWindow::clearChart(QChartView* chartView)
 {
@@ -1345,6 +1376,16 @@ void MainWindow::drawLine(QChartView* chartView, QString seriesName, const std::
     series->setPen(pen);
 }
 
+/**
+ * @brief MainWindow::setupChartAxis 设置坐标轴的相关参数
+ * @param chartView ChartView指针
+ * @param xAxisLabel X轴的名称
+ * @param xAxisMin X轴的最小值
+ * @param xAxisMax X轴的最大值
+ * @param yAxisLabel Y轴的名称
+ * @param yAxisMin Y轴的最小值
+ * @param yAxisMax Y轴的最大值
+ */
 void MainWindow::setupChartAxis(QChartView *chartView, const QString &xAxisLabel, qreal xAxisMin, qreal xAxisMax, const QString &yAxisLabel, qreal yAxisMin, qreal yAxisMax)
 {
     // 获取指向图表的指针
@@ -1370,6 +1411,51 @@ void MainWindow::setupChartAxis(QChartView *chartView, const QString &xAxisLabel
 }
 
 /**
+ * @brief MainWindow::updateRecord 更新视图中已记录的矩形控件
+ * @param viewPath 视野文件夹的名字
+ */
+void MainWindow::updateRectRecorded(QString viewPath)
+{
+    QAbstractItemModel *model = ui->tableRecord->model();
+    if (model != nullptr) {
+        for (int row = 0; row < model->rowCount(); ++ row) {
+            QString viewName = model->index(row, 13).data().toString();
+            if (viewName == viewPath) {
+                QModelIndex leftIndex = model->index(row, 9);
+                QModelIndex topIndex = model->index(row, 10);
+                QModelIndex widthIndex = model->index(row, 11);
+                QModelIndex heightIndex = model->index(row, 12);
+                int left = (leftIndex.data().toString()).toInt();
+                int top = (topIndex.data().toString()).toInt();
+                int width = (widthIndex.data().toString()).toInt();
+                int height = (heightIndex.data().toString()).toInt();
+                ui->graphicsView->addItem(QRectF(left, top, width, height));
+            }
+        }
+    }
+}
+
+void MainWindow::setupShortcuts()
+{
+    // 设置快捷键
+    WizShortcut *shortcutAdd = new WizShortcut(QKeySequence(Qt::Key_A), 3, ui->stackedWidget);
+    QObject::connect(shortcutAdd, &WizShortcut::activated, this, [this, shortcutAdd]{
+        if (m_currentPageIndex == shortcutAdd->getPageIndex()) {
+            // 当前活动页面与按钮所在页面相同时执行操作
+            ui->pushButtonAdd->click();
+        }
+    });
+
+    WizShortcut *shortcutRemove = new WizShortcut(QKeySequence(Qt::Key_D), 3, ui->stackedWidget);
+    QObject::connect(shortcutRemove, &WizShortcut::activated, this, [this, shortcutRemove]{
+        if (m_currentPageIndex == shortcutRemove->getPageIndex()) {
+            // 当前活动页面与按钮所在页面相同时执行操作
+            ui->pushButtonDelete->click();
+        }
+    });
+}
+
+/**
  * @brief MainWindow::connectSignalsAndSlots 连接信号和槽
  */
 void MainWindow::connectSignalsAndSlots()
@@ -1391,6 +1477,11 @@ void MainWindow::connectSignalsAndSlots()
 
     // 绘图完成
     connect(ui->graphicsView, SIGNAL(mouseReleased(QRectF)), this, SLOT(updateStatusBar(QRectF)));
+
+    // 记录页面索引
+    QObject::connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this](int index){
+        m_currentPageIndex = index;
+    });
 }
 
 /* 因弃用THASolver类而弃用的函数

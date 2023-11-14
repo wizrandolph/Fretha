@@ -6,9 +6,9 @@ Enumerator::Enumerator()
 
 }
 
-ChannelName Enumerator::channel2ShowToChannelName(Channel2Show channel2Show)
+ChannelName Enumerator::showTypeToChannelName(ShowType type)
 {
-    switch (channel2Show) {
+    switch (type) {
     case AANORM:
         return AA;
     case DANORM:

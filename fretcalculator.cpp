@@ -36,41 +36,30 @@ bool FretCalculator::checkReady()
 void FretCalculator::resetCalculator()
 {
     // reset calculation process flags to false
-    for (bool &flag : calcProcess)
-    {
+    for (bool &flag : calcProcess) {
         flag = false;
     }
 
     // reset data
-    for (int i = 0; i < 3; ++ i)
-    {
+    for (int i = 0; i < 3; ++ i) {
         valFore[i] = 0;
         valBack[i] = 0;
         exposureTime[i] = 0;
     }
-
-    //    // reset ratios
-    //    for (int i = 0; i < 7; ++ i)
-    //    {
-    //        ratio[i] = 0;
-    //    }
 }
 void FretCalculator::resetData()
 {
     // reset background data and foreground data
-    for (bool &flag : calcProcess)
-    {
+    for (bool &flag : calcProcess) {
         flag = false;
     }
     // reset data
-    for (int i = 0; i < 3; ++ i)
-    {
+    for (int i = 0; i < 3; ++ i) {
         valFore[i] = 0;
         valBack[i] = 0;
     }
     // reset results
-    for (double &t : result)
-    {
+    for (double &t : result) {
         t = 0.0;
     }
 }
@@ -84,7 +73,7 @@ void FretCalculator::correctData()
     for (int i = 0; i < 3; ++ i) {
         valCorr[i] = valFore[i] - valBack[i];
         if (valCorr[i] <= 0) {
-            qDebug() << "扣除背景后荧光强度非正，无法进行计算";
+            qDebug() << "[Correct Data]:\tBackground out of Foreground";
             calcProcess[CORRECT_DATA] = false;
             return;
         }
@@ -99,9 +88,8 @@ void FretCalculator::calcEFret()
             - ratio[A] * (valCorr[AA] - ratio[C] * valCorr[DD])
             - ratio[D] * (valCorr[DD] - ratio[B] * valCorr[AA]);
 
-    if (valFc <= 0)
-    {
-        qDebug() << "敏化发射强度非正，无法进行计算";
+    if (valFc <= 0) {
+        qDebug() << "[Calc E-FRET]:\tNegative Nonsense Fc";
         calcProcess[CALC_DATA] = false;
         return;
     }
@@ -120,9 +108,8 @@ void FretCalculator::calc3CubeFret()
             - ratio[A] * (valCorr[AA] - ratio[C] * valCorr[DD])
             - ratio[D] * (valCorr[DD] - ratio[B] * valCorr[AA]);
 
-    if (valFc <= 0)
-    {
-        qDebug() << "敏化发射强度非正，无法进行计算";
+    if (valFc <= 0) {
+        qDebug() << "[Calc 3 Cube FRET]:\tNegative Nonsense Fc";
         calcProcess[CALC_DATA] = false;
         return;
     }
@@ -173,8 +160,7 @@ bool FretCalculator::isDataCalculated()
 
 void FretCalculator::setRatio(RatioName ratioName, double value)
 {
-    if (ratioName == NaR)
-    {
+    if (ratioName == NaR) {
         calcProcess[SET_PARAM] = checkParamSet();
         return;
     }
@@ -194,8 +180,7 @@ void FretCalculator::setRatios(double a, double b, double c, double d, double g,
 
 void FretCalculator::setExposureTime(ChannelName channelName, double value)
 {
-    if (channelName == NaC)
-    {
+    if (channelName == NaC) {
         calcProcess[SET_PARAM] = checkParamSet();
         return;
     }
@@ -233,12 +218,10 @@ void FretCalculator::loadCorrectedGray(double I_AA, double I_DA, double I_DD)
 
 bool FretCalculator::checkDataLoaded()
 {
-    if (valFore[AA] <= 0 || valFore[DD] <= 0 || valFore[DA] <= 0)
-    {
+    if (valFore[AA] <= 0 || valFore[DD] <= 0 || valFore[DA] <= 0) {
         return false;
     }
-    if (valBack[AA] <= 0 || valBack[DD] <= 0 || valBack[DA] <= 0)
-    {
+    if (valBack[AA] <= 0 || valBack[DD] <= 0 || valBack[DA] <= 0) {
         return false;
     }
     return true;
@@ -246,8 +229,7 @@ bool FretCalculator::checkDataLoaded()
 
 bool FretCalculator::checkDataCorrected()
 {
-    if (valCorr[AA] <= 0 || valCorr[DD] <= 0 || valCorr[DA] <= 0)
-    {
+    if (valCorr[AA] <= 0 || valCorr[DD] <= 0 || valCorr[DA] <= 0) {
         return false;
     }
     return true;
@@ -255,12 +237,10 @@ bool FretCalculator::checkDataCorrected()
 
 bool FretCalculator::checkParamSet()
 {
-    if (ratio[A] <= 0 || ratio[B] <= 0 || ratio[C] <= 0 || ratio[D] <= 0 || ratio[G] <= 0 || ratio[K] <= 0 || ratio[Y])
-    {
+    if (ratio[A] <= 0 || ratio[B] <= 0 || ratio[C] <= 0 || ratio[D] <= 0 || ratio[G] <= 0 || ratio[K] <= 0 || ratio[Y]) {
         return false;
     }
-    if (exposureTime[AA] <= 0 || exposureTime[DA] <= 0 || exposureTime[DD] <= 0)
-    {
+    if (exposureTime[AA] <= 0 || exposureTime[DA] <= 0 || exposureTime[DD] <= 0) {
         return false;
     }
     return true;
@@ -287,6 +267,9 @@ void FretCalculator::showParams()
 
 double FretCalculator::getResult(CalcResult resultName)
 {
+    if (result[resultName] < 0) {
+        return 0.0;
+    }
     return result[resultName];
 }
 

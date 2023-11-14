@@ -7,12 +7,13 @@ static const int indentAbs = 10;
 
 void WizGraphicsView::setImage(const QImage &image)
 {
+    clearRectItemList();
     qreal w = m_rect.width();
     qreal h = m_rect.height();
     m_scene->clear();
     m_scene->addPixmap(QPixmap::fromImage(image));
     m_sceneRect = image.rect();
-    m_rectItem = m_scene->addRect(QRectF(0, 0, w, h), QPen(Qt::red), QBrush(Qt::transparent));
+    m_rectItem = m_scene->addRect(QRectF(0, 0, w, h), QPen(Qt::red), QBrush(QColor(69, 170, 242, 0)));
     m_rectItem->setFlag(QGraphicsItem::ItemIsMovable);
     itemToRect();
 }
@@ -40,6 +41,30 @@ void WizGraphicsView::setDrawMode(DrawMode drawMode)
     }
 }
 
+void WizGraphicsView::addItem(QRectF rect)
+{
+    QGraphicsRectItem* rectItem = m_scene->addRect(QRectF(0, 0, rect.width(), rect.height()), QPen(Qt::NoPen), QBrush(QColor(69, 170, 242, 128)));
+    rectItem->setPos(rect.x(), rect.y());
+    m_rectItemsList.append(rectItem);
+    qDebug() << "[AddItem]:\t" << m_rectItemsList.size();
+}
+
+void WizGraphicsView::removeItem(QRectF rect)
+{
+    QPointF center = rect.center();
+    for (int i = 0; i < m_rectItemsList.length(); ++ i) {
+        QGraphicsRectItem *item = m_rectItemsList[i];
+        QRectF t_rect = item->sceneBoundingRect();
+        if (t_rect.contains(center)) {
+            m_scene->removeItem(item);
+            m_rectItemsList.removeOne(item);  // 从指针列表中移除该项
+            delete item;
+            break;
+        }
+    }
+    qDebug() << "[RemoveItem]:\t" << m_rectItemsList.size();
+}
+
 void WizGraphicsView::mousePressEvent(QMouseEvent *event)
 {
     m_pressed = true;
@@ -63,14 +88,7 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
             m_pressStartPosition = mapToScene(event->pos());
 
             // 检测创建item时的边界
-            if (m_pressStartPosition.x() < m_sceneRect.left())
-                m_pressStartPosition.setX(m_sceneRect.left());
-            if (m_pressStartPosition.x() > m_sceneRect.right())
-                m_pressStartPosition.setX(m_sceneRect.right());
-            if (m_pressStartPosition.y() < m_sceneRect.top())
-                m_pressStartPosition.setY(m_sceneRect.top());
-            if (m_pressStartPosition.y() > m_sceneRect.bottom())
-                m_pressStartPosition.setY(m_sceneRect.bottom());
+            correctPointInsideScene(m_pressStartPosition);
 
             m_cursorPosition = cursorPosition(m_rect, m_pressStartPosition);    // 记录下按下鼠标时鼠标的位置
 
@@ -101,18 +119,7 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
             QRectF stampRect = QRectF(left, top, m_rect.width(), m_rect.height());
 
             // 边界检测和修正
-            if (stampRect.left() < m_sceneRect.left()) {
-                stampRect.setLeft(m_sceneRect.left());
-            }
-            if (stampRect.right() > m_sceneRect.right()) {
-                stampRect.setRight(m_sceneRect.right());
-            }
-            if (stampRect.top() < m_sceneRect.top()) {
-                stampRect.setTop(m_sceneRect.top());
-            }
-            if (stampRect.bottom() > m_sceneRect.bottom()) {
-                stampRect.setBottom(m_sceneRect.bottom());
-            }
+            correctRectInsideScene(stampRect);
 
             // 应用矩形
             m_rect = stampRect;
@@ -126,14 +133,7 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
 void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
 {
     QPointF mousePos = mapToScene(event->pos());
-    if (mousePos.x() < m_sceneRect.left())
-        mousePos.setX(m_sceneRect.left());
-    if (mousePos.x() > m_sceneRect.right())
-        mousePos.setX(m_sceneRect.right());
-    if (mousePos.y() < m_sceneRect.top())
-        mousePos.setY(m_sceneRect.top());
-    if (mousePos.y() > m_sceneRect.bottom())
-        mousePos.setY(m_sceneRect.bottom());
+    correctPointInsideScene(mousePos);
 
     // 只有鼠标没有被按下的时候，更新鼠标光标
     if (!m_pressed && m_drawMode == CropMode) {
@@ -158,23 +158,19 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
             QPointF newTopLeft = m_rect.topLeft() + delta;
             QRectF newRect = QRectF(newTopLeft, m_rect.size());
 
-            if (newRect.left() < m_sceneRect.left() ||
-                newRect.right() > m_sceneRect.right() ||
-                newRect.top() < m_sceneRect.top() ||
-                newRect.bottom() > m_sceneRect.bottom()) {
-                m_pressStartPosition = moveEndPosition;
-            }
-            else {
-                QGraphicsView::mouseMoveEvent(event);
-                itemToRect();
-            }
+            correctRectInsideScene(newRect);
+
+            m_rect = newRect;
+            rectToItem();
+
+            m_pressStartPosition = moveEndPosition;
         }
 
         // 创建新矩形区域
         if (m_creatingRect) {
             QPointF moveEndPosition = mousePos;
             m_rect = QRectF(m_pressStartPosition, moveEndPosition);
-            m_rect = correctQRectF(m_rect);
+            correctQRectF(m_rect);
             rectToItem();
         }
 
@@ -291,7 +287,6 @@ void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     // 鼠标松开，更新状态
     m_pressed = false;
     QApplication::restoreOverrideCursor();
-    QGraphicsView::mouseReleaseEvent(event);
 
     // 发送信号
     emit mouseReleased(m_rect);
@@ -312,12 +307,10 @@ void WizGraphicsView::wheelEvent(QWheelEvent *event)
 
     // 根据鼠标位置和视图中心点的差异来调整缩放因子
     constexpr qreal scaleFactorStep = 1.2;
-    if (numSteps > 0)
-    {
+    if (numSteps > 0) {
         scaleFactor *= scaleFactorStep;
     }
-    else if (numSteps < 0)
-    {
+    else if (numSteps < 0) {
         scaleFactor /= scaleFactorStep;
     }
 
@@ -452,12 +445,12 @@ bool WizGraphicsView::isPointOutsideRect(const QRectF& rect, const QPointF& poin
     return point.x() < rect.left() - indent || point.x() > rect.right() + indent || point.y() < rect.top() - indent || point.y() > rect.bottom() + indent;
 }
 
-QRectF WizGraphicsView::correctQRectF(QRectF& rect)
+void WizGraphicsView::correctQRectF(QRectF& rect)
 {
     int x, y, w, h;
 
-    x = rect.x();
-    y = rect.y();
+    x = rect.left();
+    y = rect.top();
     w = rect.width();
     h = rect.height();
 
@@ -471,5 +464,41 @@ QRectF WizGraphicsView::correctQRectF(QRectF& rect)
         h = -h;
     }
 
-    return QRectF(x, y, w, h);
+    rect = QRectF(x, y, w, h);
+}
+
+void WizGraphicsView::correctRectInsideScene(QRectF& rect)
+{
+    if (rect.left() < m_sceneRect.left()) {
+        rect.moveLeft(m_sceneRect.left());
+    }
+    if (rect.right() > m_sceneRect.right()) {
+        rect.moveRight(m_sceneRect.right());
+    }
+    if (rect.top() < m_sceneRect.top()) {
+        rect.moveTop(m_sceneRect.top());
+    }
+    if (rect.bottom() > m_sceneRect.bottom()) {
+        rect.moveBottom(m_sceneRect.bottom());
+    }
+}
+
+void WizGraphicsView::correctPointInsideScene(QPointF& point)
+{
+    if (point.x() < m_sceneRect.left())
+        point.setX(m_sceneRect.left());
+    if (point.x() > m_sceneRect.right())
+        point.setX(m_sceneRect.right());
+    if (point.y() < m_sceneRect.top())
+        point.setY(m_sceneRect.top());
+    if (point.y() > m_sceneRect.bottom())
+        point.setY(m_sceneRect.bottom());
+}
+
+void WizGraphicsView::clearRectItemList()
+{
+    for (auto it = m_rectItemsList.begin(); it != m_rectItemsList.end(); ++it) {
+        delete *it;
+    }
+    m_rectItemsList.clear();
 }
