@@ -53,6 +53,8 @@ public:
     double resultsEdRad[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
     double resultsEaRda[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
 
+    double threshRatio[3] = {3.0, 3.0, 3.0};
+
 
     /* 成员方法 *****************************************************************************************/
 
@@ -71,6 +73,9 @@ public:
     // 设置曝光时间
     void setExposureTime(ChannelName channelName, double value);
     void setExposureTimes(double expsTimeAA, double expsTimeDA, double expsTimeDD);
+    // 设置信背比阈值系数
+    void setThreshRatio(ChannelName channelName, double value);
+    void setThreshRatios(double threshAA, double threshDA, double threshDD);
     // 读取数据
     void loadSourceData(QString folderPath);
     void loadSourceData(QString pathAA, QString pathDA, QString pathDD);

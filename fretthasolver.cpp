@@ -259,6 +259,16 @@ void FretThaSolver::setExposureTimes(double expsTimeAA, double expsTimeDA, doubl
     imageProcessor->setExposureTimes(expsTimeAA, expsTimeDA, expsTimeDD);
     calculator->setExposureTimes(expsTimeAA, expsTimeDA, expsTimeDD);
 }
+void FretThaSolver::setThreshRatio(ChannelName channelName, double value)
+{
+    threshRatio[channelName] = value;
+}
+void FretThaSolver::setThreshRatios(double threshAA, double threshDA, double threshDD)
+{
+    setThreshRatio(AA, threshAA);
+    setThreshRatio(DA, threshDA);
+    setThreshRatio(DD, threshDD);
+}
 /**
  * @brief FretThaSolver::loadSourceData 加载数据
  * @param fodoubleerPath
@@ -302,7 +312,6 @@ void FretThaSolver::processImageToGrayData()
     bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
     bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
     maskSbr = FretImageProcessor::normalizeByMinMax(maskSbr8U);
-
     // 按照我们设计的算法生成评价结果
     Mat maskStd;
     Mat scoreStd(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
@@ -314,11 +323,10 @@ void FretThaSolver::processImageToGrayData()
     }
 
     Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
+    cv::imwrite((viewFolderPath + "/StdMinima.tif").toStdString(), maskStd);
     cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     maskStd.convertTo(maskStd, CV_8U);
-    cv::imwrite((viewFolderPath + "/StdMask.tif").toStdString(), maskStd);
-
-    cv::imwrite((viewFolderPath + "/Score.tif").toStdString(), FretImageProcessor::normalizeByMinMax16U(scoreStd));
+    cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
 
     // 合成最后的结果
     Mat maskUlt, scoreMat;

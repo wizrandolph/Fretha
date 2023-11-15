@@ -308,6 +308,8 @@ void MainWindow::loadLastRatio()
     QString ratioName[7] = {"A", "B", "C", "D", "G", "K", "Y"};
     double exps[3] = {100, 100, 100};
     QString expsName[3] = {"AA", "DA", "DD"};
+    double thre[3] = {3.0, 3.0, 3.0};
+    QString threName[3] = {"threAA", "threDA", "threDD"};
 
     for (int i = 0; i < 7; ++ i)
     {
@@ -340,17 +342,17 @@ void MainWindow::loadLastRatio()
     ui->lineEditExpsDA->setText(QString::number(exps[1]));
     ui->lineEditExpsDD->setText(QString::number(exps[2]));
 
-//    solver->setRatio(A, ratio[0]);
-//    solver->setRatio(B, ratio[1]);
-//    solver->setRatio(C, ratio[2]);
-//    solver->setRatio(D, ratio[3]);
-//    solver->setRatio(G, ratio[4]);
-//    solver->setRatio(K, ratio[5]);
-//    solver->setRatio(Y, ratio[6]);
+    for (int i = 0; i < 3; ++ i)
+    {
+        // 读取配置，如果存在那么更新ratio数组，如果不存在那么按照ratio写入配置文件
+        if (m_setting->contains("/AutoParams/" + threName[i]))
+            thre[i] = m_setting->value("/AutoParams/" + threName[i]).toDouble();
+        else
+            m_setting->setValue("/AutoParams/" + threName[i], thre[i]);
+    }
 
-//    solver->setExposureTimes(AA, exps[0]);
-//    solver->setExposureTimes(DA, exps[1]);
-//    solver->setExposureTimes(DD, exps[2]);
+    /*
+     * 添加数据到控件 */
 
     // 同步FRET计算器中的参数设置
     fretCalculator->setExposureTimes(exps[0], exps[1], exps[2]);
@@ -380,6 +382,7 @@ void MainWindow::loadLastRatio()
                               ratio[4],
                               ratio[5],
                               ratio[6]);
+    fretThaSolver->setThreshRatios(thre[0], thre[1], thre[2]);
 
     fretCalculator->showParams();
 
@@ -1445,9 +1448,12 @@ void MainWindow::updateRectRecorded(QString viewPath)
     }
 }
 
+/**
+ * @brief MainWindow::setupShortcuts 设置快捷键，仅在圈点界面有效
+ */
 void MainWindow::setupShortcuts()
 {
-    // 设置快捷键
+    // 添加数据按键
     WizShortcut *shortcutAdd = new WizShortcut(QKeySequence(Qt::Key_A), 3, ui->stackedWidget);
     QObject::connect(shortcutAdd, &WizShortcut::activated, this, [this, shortcutAdd]{
         if (m_currentPageIndex == shortcutAdd->getPageIndex()) {
@@ -1456,6 +1462,7 @@ void MainWindow::setupShortcuts()
         }
     });
 
+    // 删除数据按键
     WizShortcut *shortcutRemove = new WizShortcut(QKeySequence(Qt::Key_D), 3, ui->stackedWidget);
     QObject::connect(shortcutRemove, &WizShortcut::activated, this, [this, shortcutRemove]{
         if (m_currentPageIndex == shortcutRemove->getPageIndex()) {
