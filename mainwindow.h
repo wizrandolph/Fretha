@@ -31,7 +31,7 @@ private:
     QDialog *m_dialog;    // 警告对话框
     QString m_savePath;   // 保存目录，一般为 strPath + "/THAResult"
     QString m_globalPath;    // 总文件夹的完整绝对路径，其下包含多个FRET共定位视野
-    QString currentViewName;
+    QString currentViewName;    // 视野名字
     int m_currentPageIndex;
 
     FretCalculator *fretCalculator = new FretCalculator();
@@ -39,7 +39,7 @@ private:
     FretThaSolver *fretThaSolver = new FretThaSolver();
 
     QImage m_image2Show;
-    QString dir2Show; // 当前显示图片的视野的完整绝对路径
+    QString m_currentViewPath; // 当前显示图片的视野的完整绝对路径
     ShowType m_showType;  // 当前要显示的通道
 
     //图表

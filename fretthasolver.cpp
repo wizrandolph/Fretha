@@ -323,7 +323,7 @@ void FretThaSolver::processImageToGrayData()
     }
 
     Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
-    cv::imwrite((viewFolderPath + "/StdMinima.tif").toStdString(), maskStd);
+    cv::imwrite((viewFolderPath + "/StdMinima.tif").toStdString(), scoreStd);
     cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     maskStd.convertTo(maskStd, CV_8U);
     cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
@@ -368,9 +368,11 @@ void FretThaSolver::processOneBatch(QString batchFolderPath)
 {
     qDebug() << "[Processing Batch]:\t" << batchFolderPath;
     this->batchFolderPath = batchFolderPath;
+
     // 清空数据存储
     clearGrayData();
     clearFretData();
+
     // 检查目录是否存在
     QDir batchDir(batchFolderPath);
     if (!batchDir.exists()) return;
@@ -403,7 +405,7 @@ void FretThaSolver::performTwoHybridMatlab()  // matlab求解规划()
         arrayEdcorr.set_size(1, n);
     }
     else {
-        qDebug() << "fitNonlinear failed:\t size not match";
+        qDebug() << "[Fret Two Hybrid Nonlinear Solution]:\t Data Size Not Matched";
         return;
     }
     // 读取数据
@@ -428,13 +430,12 @@ void FretThaSolver::performTwoHybridMatlab()  // matlab求解规划()
         vecFretData[Afree].push_back(valAfree);
         vecFretData[Dfree].push_back(vadoublefree);
     }
-    qDebug() << "****************Fret Two Hybrid Matlab Solution****************";
-    qDebug() << "Ed,max:\t" << resultsTha[EDMAX]
-             << "Ea,max:\t" << resultsTha[EAMAX]
-             << "Kd,EFF:\t" << resultsTha[KDEFF]
-             << "Nd/Na:\t" << resultsTha[ND_NA]
-             << "loss:\t" << loss;
-    qDebug() << "Solve succeeded";
+    qDebug() << "[Fret Two Hybrid Matlab Solution]:";
+    qDebug() << "Ed,max:" << resultsTha[EDMAX]
+             << "\tEa,max:" << resultsTha[EAMAX]
+             << "\tKd,EFF:" << resultsTha[KDEFF]
+             << "\tNd/Na:" << resultsTha[ND_NA]
+             << "\tloss:" << loss;
 }
 
 void FretThaSolver::performTwoHybridMatlabBin(double min, double max, double interval)  // matlab求解规划()
@@ -456,9 +457,10 @@ void FretThaSolver::performTwoHybridMatlabBin(double min, double max, double int
         arrayEdcorr.set_size(1, n);
     }
     else {
-        qDebug() << "fitNonlinear failed:\t size not match";
+        qDebug() << "[Fret Two Hybrid Nonlinear Solution]:\t Data Size Not Matched";
         return;
     }
+
     // 读取数据
     for (uint i = 0; i < n; ++ i) {
         arrayAest[i] = vecFretDataBin[Aest][i];
@@ -481,13 +483,12 @@ void FretThaSolver::performTwoHybridMatlabBin(double min, double max, double int
         vecFretDataBin[Afree].push_back(valAfree);
         vecFretDataBin[Dfree].push_back(valDfree);
     }
-    qDebug() << "****************Fret Two Hybrid Nonlinear Solution****************";
-    qDebug() << "Ed,max:\t" << resultsThaBin[EDMAX]
-             << "Ea,max:\t" << resultsThaBin[EAMAX]
-             << "Kd,EFF:\t" << resultsThaBin[KDEFF]
-             << "Nd/Na:\t" << resultsThaBin[ND_NA]
-             << "loss:\t" << loss;
-    qDebug() << "fitNonlinear succeeded:\t loss =" << loss;
+    qDebug() << "[Fret Two Hybrid Nonlinear Solution]:";
+    qDebug() << "Ed,max:" << resultsThaBin[EDMAX]
+             << "\tEa,max:" << resultsThaBin[EAMAX]
+             << "\tKd,EFF:" << resultsThaBin[KDEFF]
+             << "\tNd/Na:" << resultsThaBin[ND_NA]
+             << "\tloss:" << loss;
 }
 
 void FretThaSolver::performTwoHybridLinear()
@@ -503,15 +504,15 @@ void FretThaSolver::performTwoHybridLinear()
 
 
     // Debug
-    qDebug() << "****************Fret Two Hybrid Linear Solution****************";
-    qDebug() << "[Donor View Results]";
-    qDebug() << "Ed,max:\t" << resultsEdRad[EDMAX] << "\t"
-             << "Ea,max:\t" << resultsEdRad[EAMAX] << "\t"
-             << "Nd/Na:\t" << resultsEdRad[ND_NA];
-    qDebug() << "[Accept View Results]";
-    qDebug() << "Ed,max:\t" << resultsEaRda[EDMAX] << "\t"
-             << "Ea,max:\t" << resultsEaRda[EAMAX] << "\t"
-             << "Nd/Na:\t" << resultsEaRda[ND_NA];
+    qDebug() << "[Fret Two Hybrid Linear Solution]:";
+    qDebug() << "[Donor View Results]:";
+    qDebug() << "Ed,max:" << resultsEdRad[EDMAX]
+             << "\tEa,max:" << resultsEdRad[EAMAX]
+             << "\tNd/Na:" << resultsEdRad[ND_NA];
+    qDebug() << "[Accept View Results]:";
+    qDebug() << "Ed,max:" << resultsEaRda[EDMAX]
+             << "\tEa,max:" << resultsEaRda[EAMAX]
+             << "\tNd/Na:" << resultsEaRda[ND_NA];
 }
 
 double FretThaSolver::maxData(CalcResult dataName)
@@ -535,12 +536,13 @@ double FretThaSolver::maxBinData(CalcResult dataName)
 int FretThaSolver::binData(double min, double max, double interval)
 {
     using namespace std;
-    qDebug() << "*********************数据合并预处理Data*******************";
-    qDebug() << (double)min
-             << "-" << (double)max
-             << "，" << (double)interval;
-                // 清空bin数据
-                clearFretDataBin();
+    qDebug() << "[Bin Data]:\tFrom"
+             << min
+             << "To" << max
+             << "By" << interval;
+
+    // 清空bin数据
+    clearFretDataBin();
 
     // 定义数据
     int num = (max - min) / interval;
@@ -585,6 +587,7 @@ int FretThaSolver::binData(double min, double max, double interval)
 
 void FretThaSolver::mainActivity()
 {
+    qDebug() << "[THA Solution Start]";
     void clearGrayData();
     void clearFretData();
     void clearFretDataBin();

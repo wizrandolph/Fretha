@@ -103,7 +103,7 @@ void FretImageProcessor::loadSourceData(QString pathAA,
     matSrc[AA] = cv::imread(pathAA.toStdString(), -1);
     matSrc[DA] = cv::imread(pathDA.toStdString(), -1);
     matSrc[DD] = cv::imread(pathDD.toStdString(), -1);
-    checkDataLoaded();
+    calcProcess[LOAD_DATA] = checkDataLoaded();
 }
 
 void FretImageProcessor::preProcessData() {

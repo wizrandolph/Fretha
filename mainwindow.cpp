@@ -942,34 +942,32 @@ QImage MainWindow::getImageToShow()
     QImage qtImage;
 
     switch (m_showType){
-    case MERGED: {
-        cvImage= fretImageProcessor->getMergedImage();
-        break;
-    }
-    case EDPSEU: {
-        fretImageProcessor->preProcessData();
-        fretImageProcessor->calcEFret();
-        cvImage= fretImageProcessor->getPseuImage(Ed);
-        break;
-    }
-    case RCPSEU: {
-        fretImageProcessor->preProcessData();
-        fretImageProcessor->calcEFret();
-        cvImage = fretImageProcessor->getPseuImage(Rad);
-        break;
-    }
-    default: {
-        ChannelName channelName = Enumerator::showTypeToChannelName(m_showType);
-        if (channelName != NaC)
-        {
-            cvImage = fretImageProcessor->getNormalizedImage(channelName);
+        case MERGED: {
+            cvImage= fretImageProcessor->getMergedImage();
+            break;
         }
-        break;
-    }
+        case EDPSEU: {
+            fretImageProcessor->preProcessData();
+            fretImageProcessor->calcEFret();
+            cvImage= fretImageProcessor->getPseuImage(Ed);
+            break;
+        }
+        case RCPSEU: {
+            fretImageProcessor->preProcessData();
+            fretImageProcessor->calcEFret();
+            cvImage = fretImageProcessor->getPseuImage(Rad);
+            break;
+        }
+        default: {
+            ChannelName channelName = Enumerator::showTypeToChannelName(m_showType);
+            if (channelName != NaC) {
+                cvImage = fretImageProcessor->getNormalizedImage(channelName);
+            }
+            break;
+        }
     }
 
-    if (cvImage.empty())
-    {
+    if (cvImage.empty()) {
         qDebug() << "当前用于显示的图片出现问腿";
         return m_image2Show;
     }
@@ -985,14 +983,24 @@ QImage MainWindow::getImageToShow()
     return qtImage;
 }
 
+/**
+ * @brief MainWindow::changeView 切换视野
+ * @param index 视野表格中的索引
+ */
 void MainWindow::changeView(QModelIndex &index)
 {
-    // 获取点击的单元格的索引
+    // 获取点击的单元格的索引、视野名
     int row = index.row();
     QModelIndex secondColumnIndex = ui->tableView->model()->index(row, 1);
+    QString viewName = ui->tableView->model()->index(row, 0).data().toString();
 
-    if (ui->tableView->model()->data(secondColumnIndex).toString() != "Unknown")
-    {
+    // 如果当前显示的是相同视野，那么不会产生操作
+    if (viewName == m_currentViewPath) {
+        return;
+    }
+
+    if (ui->tableView->model()->data(secondColumnIndex).toString() != "Unknown") {
+
         // 修改该行的第三列数据为"Yes"
         QModelIndex thirdColumnIndex = ui->tableView->model()->index(row, 2);
         ui->tableView->model()->setData(thirdColumnIndex, "√");
@@ -1003,45 +1011,39 @@ void MainWindow::changeView(QModelIndex &index)
                 ui->tableView->model()->setData(otherThirdColumnIndex, "");
             }
         }
+
         // 切换为视野的图片内容
-        QString viewPath = ui->tableView->model()->index(row, 0).data().toString();
+        m_currentViewPath = m_globalPath + "\\" + viewName;
+        currentViewName = viewName;
+        qDebug() << "[Change View]:\t" << m_currentViewPath;
+        fretImageProcessor->loadSourceData(m_currentViewPath);
 
-        dir2Show = m_globalPath + "\\" + viewPath;
-        currentViewName = viewPath;
-        qDebug() << "[Change View]:\t" << dir2Show;
-        fretImageProcessor->loadSourceData(dir2Show);
-
+        // 更新绘图控件、表格、状态栏
         updateGraphicsView();
-
-        updateRectRecorded(viewPath);
+        updateRectRecorded(viewName);
         updateStatusBar(ui->graphicsView->getRect());
     }
-
-
 }
 
+/**
+ * @brief MainWindow::trackRect 跟踪定位ROI
+ * @param index
+ */
 void MainWindow::trackRect(QModelIndex &index)
 {
-    // 获取点击的单元格的索引
+    // 获取点击的单元格中的数据
     int row = index.row();
     QModelIndex viewNameIndex = ui->tableRecord->model()->index(row, 13);
     QModelIndex leftIndex = ui->tableRecord->model()->index(row, 9);
     QModelIndex topIndex = ui->tableRecord->model()->index(row, 10);
     QModelIndex widthIndex = ui->tableRecord->model()->index(row, 11);
     QModelIndex heightIndex = ui->tableRecord->model()->index(row, 12);
-
-
-    double left = (leftIndex.data().toString()).toInt();
-    double top = (topIndex.data().toString()).toInt();
-    double width = (widthIndex.data().toString()).toInt();
-    double height = (heightIndex.data().toString()).toInt();
-
-    QString viewName = viewNameIndex.data().toString();
+    QString viewName = viewNameIndex.data().toString();    // 记录表格中的视野名
 
     int targetRow = -1;
-
     QAbstractItemModel *model = ui->tableView->model();
 
+    // 找到视野表格中同视野名的索引
     for (int i = 0; i < model->rowCount(); ++ i) {
         QModelIndex index = model->index(i, 0);  // 第一列的索引为(行, 列)
         QVariant data = model->data(index);
@@ -1052,26 +1054,29 @@ void MainWindow::trackRect(QModelIndex &index)
         }
     }
 
-    if (targetRow == -1)
-    {
-        showAlertDialog("未找到目标视野，请确认数据与图片匹配");
+    if (targetRow == -1) {
+        showAlertDialog("[Track Rect]:\tView Not Found");
         return;
     }
+    ui->tableView->selectRow(targetRow);
 
     QModelIndex targetIndex = model->index(targetRow, 0); // 目标行索引
+    changeView(targetIndex);
 
+    // 更新ROI到绘图界面
+    double left = (leftIndex.data().toString()).toDouble();
+    double top = (topIndex.data().toString()).toDouble();
+    double width = (widthIndex.data().toString()).toDouble();
+    double height = (heightIndex.data().toString()).toDouble();
     QRectF roi(left, top, width, height);
-
-    if (currentViewName != viewName) {
-        changeView(targetIndex);
-    }
-
-    ui->tableView->selectRow(targetRow);
     ui->graphicsView->setRect(roi);
     updateStatusBar(roi);
 
 }
 
+/**
+ * @brief MainWindow::initUICharts 初始化界面的中的表格
+ */
 void MainWindow::initUICharts()
 {
     // 初始化所有的图表
@@ -1088,6 +1093,9 @@ void MainWindow::initUICharts()
     ui->horizontalLayoutChartP3->insertWidget(1, m_chartView[EaDfreeBin]);
 }
 
+/**
+ * @brief MainWindow::initUI 初始化界面
+ */
 void MainWindow::initUI()
 {
     ui->pushButtonEdRc->setCheckable(true);
@@ -1131,6 +1139,10 @@ void MainWindow::updateResultInterface()
     ui->lineEditEdmaxAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[EDMAX] + fretThaSolver->resultsEaRda[EDMAX]) / 2));
     ui->lineEditNNAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[ND_NA] + fretThaSolver->resultsEaRda[ND_NA]) / 2));
 }
+
+/**
+ * @brief MainWindow::updateThaCharts 更新双杂交图
+ */
 void MainWindow::updateThaCharts()
 {
     // 清空图标中的数据
