@@ -10,12 +10,15 @@ void WizGraphicsView::setImage(const QImage &image)
     clearRectItemList();
     qreal w = m_rect.width();
     qreal h = m_rect.height();
+    qreal l = image.width() / 2 - w / 2;
+    qreal t = image.height() / 2 - h / 2;
     m_scene->clear();
     m_scene->addPixmap(QPixmap::fromImage(image));
     m_sceneRect = image.rect();
-    m_rectItem = m_scene->addRect(QRectF(0, 0, w, h), QPen(Qt::red), QBrush(QColor(69, 170, 242, 0)));
+    m_rectItem = m_scene->addRect(QRectF(l, t, w, h), QPen(Qt::red), QBrush(QColor(69, 170, 242, 0)));
     m_rectItem->setFlag(QGraphicsItem::ItemIsMovable);
     itemToRect();
+    centerOn(m_rect.center());
 }
 
 QRectF WizGraphicsView::getRect()
@@ -268,7 +271,6 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
 void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
     qDebug() << "[Mouse Action]:\t" << "Released";
-    qDebug() << m_rectItem->sceneBoundingRect() << m_rect;
 
     if (m_draggingScene) {
         m_draggingScene = false;

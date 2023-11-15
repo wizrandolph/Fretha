@@ -437,7 +437,7 @@ void MainWindow::on_pushButtonAdd_clicked()
     // 获取ROI
     QRectF rectf = ui->graphicsView->getRect();
     ui->graphicsView->addItem(rectf);   // 记录到图形场景中
-    int x, y, w, h;
+    double x, y, w, h;
     x = rectf.x();
     y = rectf.y();
     w = rectf.width();
@@ -462,7 +462,9 @@ void MainWindow::on_pushButtonAdd_clicked()
     double valDest = fretCalculator->getResult(Dest);
 
     int columnIndex = 0;
+
     // 如果能够完成数据的计算，那么会向结果列表中添加当前数据
+    QModelIndex index = model->index(cnt, 0);
 
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[AA])));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DA])));
@@ -479,6 +481,8 @@ void MainWindow::on_pushButtonAdd_clicked()
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(h)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(currentViewName));
     model->setRowCount(cnt + 1);
+
+    ui->tableRecord->setCurrentIndex(index);
 
 
     // 设置表格格式
@@ -868,6 +872,10 @@ void MainWindow::on_pushButtonDelete_clicked()
         ui->graphicsView->removeItem(rect);
 
         ui->tableRecord->model()->removeRow(row);
+        if (row - 1 >= 0) {
+            QModelIndex index = ui->tableRecord->model()->index(row - 1, 0);
+            ui->tableRecord->setCurrentIndex(index);
+        }
     }
 }
 
@@ -997,11 +1005,13 @@ void MainWindow::changeView(QModelIndex &index)
 
         dir2Show = m_globalPath + "\\" + viewPath;
         currentViewName = viewPath;
-        qDebug() << "切换视野:\t" << dir2Show;
+        qDebug() << "[Change View]:\t" << dir2Show;
         fretImageProcessor->loadSourceData(dir2Show);
+
         updateGraphicsView();
 
         updateRectRecorded(viewPath);
+        updateStatusBar(ui->graphicsView->getRect());
     }
 
 
@@ -1018,10 +1028,10 @@ void MainWindow::trackRect(QModelIndex &index)
     QModelIndex heightIndex = ui->tableRecord->model()->index(row, 12);
 
 
-    int left = (leftIndex.data().toString()).toInt();
-    int top = (topIndex.data().toString()).toInt();
-    int width = (widthIndex.data().toString()).toInt();
-    int height = (heightIndex.data().toString()).toInt();
+    double left = (leftIndex.data().toString()).toInt();
+    double top = (topIndex.data().toString()).toInt();
+    double width = (widthIndex.data().toString()).toInt();
+    double height = (heightIndex.data().toString()).toInt();
 
     QString viewName = viewNameIndex.data().toString();
 
