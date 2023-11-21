@@ -93,22 +93,28 @@ private:
 
 private slots:
     void on_pushButtonBrowse_clicked();
+
     void on_pushButtonAuto_clicked();
+    void on_pushButtonManu_clicked();
+    void on_pushButtonRatio_clicked();
+    void on_pushButtonSetRatio_clicked();
+
     void on_pushButtonEdRc_clicked();
     void on_pushButtonTHA_clicked();
     void on_pushButtonBin_clicked();
-    void on_pushButtonHome_clicked();
     void on_pushButtonBinExec_clicked();
+
+    void on_pushButtonHome_clicked();
+
     void on_pushButtonSave_clicked();
-    void on_pushButtonRatio_clicked();
-    void on_pushButtonSetRatio_clicked();
-    void on_pushButtonManu_clicked();
+
     void on_pushButtonAdd_clicked();
+    void on_pushButtonDelete_clicked();
+
     void on_pushButtonExport_clicked();
     void on_pushButtonCalc_clicked();
     void on_pushButtonBack_clicked();
     void on_pushButtonImportScreen_clicked();
-    void on_pushButtonDelete_clicked();
 
     void solveFinished();
     void updateStatusBar(QRectF);

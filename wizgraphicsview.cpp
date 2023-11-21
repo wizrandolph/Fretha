@@ -31,6 +31,7 @@ void WizGraphicsView::setRect(QRectF rect)
     m_rect = rect;
     rectToItem();
     centerOn(m_rect.center());
+    qDebug() << "[Set Active Rect]:\t" << m_rect;
 }
 
 void WizGraphicsView::setDrawMode(DrawMode drawMode)
@@ -254,7 +255,7 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
 
 void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << "[Mouse Action]:\t" << "Released";
+    qDebug() << "[Mouse Release]:\t" << m_rect;
 
     if (m_draggingScene) {
         m_draggingScene = false;
@@ -379,43 +380,46 @@ void WizGraphicsView::updateCursorIcon(const QPointF & _mousePosition)
     //
     switch (cursorPosition(m_rect, _mousePosition))
     {
-    case CursorPositionTopRight:
-    case CursorPositionBottomLeft:
-        cursorIcon = QCursor(Qt::SizeBDiagCursor);
-        break;
-    case CursorPositionTopLeft:
-    case CursorPositionBottomRight:
-        cursorIcon = QCursor(Qt::SizeFDiagCursor);
-        break;
-    case CursorPositionTop:
-    case CursorPositionBottom:
-        cursorIcon = QCursor(Qt::SizeVerCursor);
-        break;
-    case CursorPositionLeft:
-    case CursorPositionRight:
-        cursorIcon = QCursor(Qt::SizeHorCursor);
-        break;
-    case CursorPositionMiddle:
-        cursorIcon = m_resizingRect ?
-                         QCursor(Qt::ClosedHandCursor) :
-                         QCursor(Qt::OpenHandCursor);
-        break;
-    case CursorPositionOutside:
-        cursorIcon = QCursor(Qt::ArrowCursor);
-        break;
-    case CursorPositionUndefined:
-    default:
-        cursorIcon = QCursor(Qt::ArrowCursor);
-        break;
+        case CursorPositionTopRight:
+        case CursorPositionBottomLeft:
+            cursorIcon = QCursor(Qt::SizeBDiagCursor);
+            break;
+        case CursorPositionTopLeft:
+        case CursorPositionBottomRight:
+            cursorIcon = QCursor(Qt::SizeFDiagCursor);
+            break;
+        case CursorPositionTop:
+        case CursorPositionBottom:
+            cursorIcon = QCursor(Qt::SizeVerCursor);
+            break;
+        case CursorPositionLeft:
+        case CursorPositionRight:
+            cursorIcon = QCursor(Qt::SizeHorCursor);
+            break;
+        case CursorPositionMiddle:
+            cursorIcon = m_resizingRect ?
+                             QCursor(Qt::ClosedHandCursor) :
+                             QCursor(Qt::OpenHandCursor);
+            break;
+        case CursorPositionOutside:
+            cursorIcon = QCursor(Qt::ArrowCursor);
+            break;
+        case CursorPositionUndefined:
+        default:
+            cursorIcon = QCursor(Qt::ArrowCursor);
+            break;
     }
     this->setCursor(cursorIcon);
 }
 
 void WizGraphicsView::rectToItem()
 {
-    QRectF newRect = QRectF(0, 0, m_rect.width(), m_rect.height());
+    QPen pen = m_rectItem->pen();
+    qreal borderSize = pen.widthF();
+    QRectF newRect = QRectF(0, 0, m_rect.width() - borderSize, m_rect.height() - borderSize);
     m_rectItem->setRect(newRect);
-    m_rectItem->setPos(m_rect.x(), m_rect.y());
+    m_rectItem->setPos(m_rect.x() + borderSize / 2, m_rect.y() + borderSize / 2);
+    qDebug() << "[RectItem To Rect]:\t" << m_rectItem->sceneBoundingRect() << m_rect;
 }
 void WizGraphicsView::itemToRect()
 {
