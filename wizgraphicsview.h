@@ -28,7 +28,7 @@ public:
     void setRect(QRectF);
     void setDrawMode(DrawMode);
     void addItem(QRectF);
-    void removeItem(QRectF);
+    void clearRectItemList();
 
 protected:
     // 设置鼠标事件
@@ -64,7 +64,7 @@ private:
     void correctQRectF(QRectF& rect);
     void correctRectInsideScene(QRectF& rect);
     void correctPointInsideScene(QPointF& point);
-    void clearRectItemList();
+
 signals:
     void mouseReleased(QRectF);
 };

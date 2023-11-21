@@ -663,6 +663,22 @@ cv::Mat FretImageProcessor::findLocalMinima(const cv::Mat& src)
     return dst;
 }
 
+cv::Mat FretImageProcessor::findLocalMinimaLaplacian(const cv::Mat& src)
+{
+
+    cv::Mat kernel;
+    kernel = (cv::Mat_<float>(5, 5)
+                      <<  1, 1, 1, 1, 1,
+                          1, 1, 1, 1, 1,
+                          1, 1, -24, 1, 1,
+                          1, 1, 1, 1, 1,
+                          1, 1, 1, 1, 1);
+    cv::Mat dst;
+    cv::filter2D(src, dst, -1, kernel);
+
+    return dst;
+}
+
 cv::Mat FretImageProcessor::detectEdgesBySobel(const cv::Mat& src, int kernelSize) {
     // 检查是否是多通道图像
     cv::Mat gray;

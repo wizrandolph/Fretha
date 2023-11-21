@@ -35,7 +35,7 @@
        <string notr="true"/>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="pageStart">
        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="3">
@@ -380,8 +380,11 @@ FRET 双杂交分析</string>
           </item>
           <item>
            <widget class="QStackedWidget" name="stackedWidgetResult">
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="pageTHA">
              <layout class="QVBoxLayout" name="verticalLayout">

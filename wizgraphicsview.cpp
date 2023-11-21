@@ -52,22 +52,6 @@ void WizGraphicsView::addItem(QRectF rect)
     qDebug() << "[AddItem]:\t" << m_rectItemsList.size();
 }
 
-void WizGraphicsView::removeItem(QRectF rect)
-{
-    QPointF center = rect.center();
-    for (int i = 0; i < m_rectItemsList.length(); ++ i) {
-        QGraphicsRectItem *item = m_rectItemsList[i];
-        QRectF t_rect = item->sceneBoundingRect();
-        if (t_rect.contains(center)) {
-            m_scene->removeItem(item);
-            m_rectItemsList.removeOne(item);  // 从指针列表中移除该项
-            delete item;
-            break;
-        }
-    }
-    qDebug() << "[RemoveItem]:\t" << m_rectItemsList.size();
-}
-
 void WizGraphicsView::mousePressEvent(QMouseEvent *event)
 {
     m_pressed = true;
@@ -284,7 +268,6 @@ void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     if (m_creatingRect) {
         m_creatingRect = false;
     }
-    QGraphicsView::mouseReleaseEvent(event);
 
     // 鼠标松开，更新状态
     m_pressed = false;
@@ -292,6 +275,8 @@ void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 
     // 发送信号
     emit mouseReleased(m_rect);
+
+    QGraphicsView::mouseReleaseEvent(event);
 }
 
 void WizGraphicsView::wheelEvent(QWheelEvent *event)
@@ -499,7 +484,7 @@ void WizGraphicsView::correctPointInsideScene(QPointF& point)
 
 void WizGraphicsView::clearRectItemList()
 {
-    for (auto it = m_rectItemsList.begin(); it != m_rectItemsList.end(); ++it) {
+    for (auto it = m_rectItemsList.begin(); it != m_rectItemsList.end(); ++ it) {
         delete *it;
     }
     m_rectItemsList.clear();

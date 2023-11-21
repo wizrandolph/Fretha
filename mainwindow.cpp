@@ -446,6 +446,7 @@ void MainWindow::on_pushButtonAdd_clicked()
     w = rectf.width();
     h = rectf.height();
     int cnt = model->rowCount();
+    qDebug() << "[Add Data]:\t" << x << y << w << h;
 
     double foreGround[3];
 
@@ -500,8 +501,7 @@ void MainWindow::on_pushButtonAdd_clicked()
 void MainWindow::exportToCSV(const QTableView* tableView, const QString& filePath)
 {
     QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return;
     }
 
@@ -509,24 +509,21 @@ void MainWindow::exportToCSV(const QTableView* tableView, const QString& filePat
 
     // 写入表头
     QStringList headerList;
-    for (int section = 0; section < tableView->horizontalHeader()->count(); ++section)
-    {
+    for (int section = 0; section < tableView->horizontalHeader()->count(); ++section) {
         QString headerText = tableView->model()->headerData(section, Qt::Horizontal, Qt::DisplayRole).toString();
         headerList.append(headerText);
     }
     stream << " , " << headerList.join(",") << "\n";
 
     // 写入数据
-    for (int row = 0; row < tableView->model()->rowCount(); ++row)
-    {
+    for (int row = 0; row < tableView->model()->rowCount(); ++row) {
         QStringList dataList;
 
         // 写入行序号
         dataList.append(QString::number(row + 1));
 
         // 写入每一行的数据
-        for (int column = 0; column < tableView->model()->columnCount(); ++column)
-        {
+        for (int column = 0; column < tableView->model()->columnCount(); ++column) {
             QString cellText = tableView->model()->data(tableView->model()->index(row, column)).toString();
             dataList.append(cellText);
         }
@@ -540,8 +537,7 @@ void MainWindow::exportToCSV(const QTableView* tableView, const QString& filePat
 void MainWindow::on_pushButtonExport_clicked()
 {
     QString filePath = getSaveCsvFilePath(this);
-    if (!filePath.isEmpty())
-    {
+    if (!filePath.isEmpty()) {
         exportToCSV(ui->tableRecord, filePath);
     }
 }
@@ -861,20 +857,12 @@ void MainWindow::on_pushButtonDelete_clicked()
 
         int row = selectedRows.at(0).row();
 
-        QModelIndex leftIndex = ui->tableRecord->model()->index(row, 9);
-        QModelIndex topIndex = ui->tableRecord->model()->index(row, 10);
-        QModelIndex widthIndex = ui->tableRecord->model()->index(row, 11);
-        QModelIndex heightIndex = ui->tableRecord->model()->index(row, 12);
-        int left = (leftIndex.data().toString()).toInt();
-        int top = (topIndex.data().toString()).toInt();
-        int width = (widthIndex.data().toString()).toInt();
-        int height = (heightIndex.data().toString()).toInt();
+        QModelIndex viewIndex = ui->tableRecord->model()->index(row, 13);
+        QString view = viewIndex.data().toString();
 
-        QRectF rect = QRectF(left, top, width, height);
-        qDebug() << "[Delete Data]:\t" << rect;
-        ui->graphicsView->removeItem(rect);
-
+        ui->graphicsView->clearRectItemList();
         ui->tableRecord->model()->removeRow(row);
+        updateRectRecorded(view);
         if (row - 1 >= 0) {
             QModelIndex index = ui->tableRecord->model()->index(row - 1, 0);
             ui->tableRecord->setCurrentIndex(index);
@@ -1062,6 +1050,7 @@ void MainWindow::trackRect(QModelIndex &index)
 
     QModelIndex targetIndex = model->index(targetRow, 0); // 目标行索引
     changeView(targetIndex);
+    updateRectRecorded(viewName);
 
     // 更新ROI到绘图界面
     double left = (leftIndex.data().toString()).toDouble();
@@ -1446,14 +1435,17 @@ void MainWindow::updateRectRecorded(QString viewPath)
         for (int row = 0; row < model->rowCount(); ++ row) {
             QString viewName = model->index(row, 13).data().toString();
             if (viewName == viewPath) {
+
                 QModelIndex leftIndex = model->index(row, 9);
                 QModelIndex topIndex = model->index(row, 10);
                 QModelIndex widthIndex = model->index(row, 11);
                 QModelIndex heightIndex = model->index(row, 12);
-                int left = (leftIndex.data().toString()).toInt();
-                int top = (topIndex.data().toString()).toInt();
-                int width = (widthIndex.data().toString()).toInt();
-                int height = (heightIndex.data().toString()).toInt();
+
+                int left = (leftIndex.data().toString()).toDouble();
+                int top = (topIndex.data().toString()).toDouble();
+                int width = (widthIndex.data().toString()).toDouble();
+                int height = (heightIndex.data().toString()).toDouble();
+
                 ui->graphicsView->addItem(QRectF(left, top, width, height));
             }
         }

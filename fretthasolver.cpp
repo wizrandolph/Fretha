@@ -312,18 +312,30 @@ void FretThaSolver::processImageToGrayData()
     bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
     bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
     maskSbr = FretImageProcessor::normalizeByMinMax(maskSbr8U);
+    cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
+
     // 按照我们设计的算法生成评价结果
     Mat maskStd;
     Mat scoreStd(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
     for (int i = 0; i < 3; ++ i) {
+
         Mat matStd = FretImageProcessor::localStandardDeviation(matFiltered[i], 5);
         Mat matStd8U = FretImageProcessor::normalizeByMinMax8U(matStd);
+        cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
+
         Mat matStdMinima = FretImageProcessor::findLocalMinima(matStd8U);
+        Mat matStdMinima8U = FretImageProcessor::normalizeByMinMax8U(matStdMinima);
+        cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
+
+        Mat matStdMinimaLap = FretImageProcessor::findLocalMinimaLaplacian(matStd8U);
+        Mat matStdMinimaLap8U = FretImageProcessor::normalizeByMinMax8U(matStdMinimaLap);
+        cv::imwrite((viewFolderPath + "/StdLocalMinimaLaplacian" + QString::number(i) + ".tif").toStdString(), matStdMinimaLap8U);
+
         scoreStd = scoreStd + FretImageProcessor::normalizeByMinMax(matStdMinima);
     }
 
     Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
-    cv::imwrite((viewFolderPath + "/StdMinima.tif").toStdString(), scoreStd);
+    cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
     cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     maskStd.convertTo(maskStd, CV_8U);
     cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);

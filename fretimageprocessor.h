@@ -88,6 +88,7 @@ public:
     static double calcOtsuThreshold(const cv::Mat& src);
     // 极小值点
     static cv::Mat findLocalMinima(const cv::Mat& src);
+    static cv::Mat findLocalMinimaLaplacian(const cv::Mat& src);
     // 边缘检测
     static cv::Mat detectEdgesBySobel(const cv::Mat& src, int kernelSize);
     // 直方图计算背景值
