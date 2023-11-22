@@ -12,12 +12,17 @@ void WizGraphicsView::setImage(const QImage &image)
     qreal h = m_rect.height();
     qreal l = image.width() / 2 - w / 2;
     qreal t = image.height() / 2 - h / 2;
+
     m_scene->clear();
     m_scene->addPixmap(QPixmap::fromImage(image));
     m_sceneRect = image.rect();
+
     m_rectItem = m_scene->addRect(QRectF(l, t, w, h), QPen(Qt::red), QBrush(QColor(69, 170, 242, 0)));
     m_rectItem->setFlag(QGraphicsItem::ItemIsMovable);
-    itemToRect();
+    m_rectItem->setZValue(100000);
+
+    updateRect(QRectF(l, t, w, h));
+
     centerOn(m_rect.center());
 }
 
@@ -28,8 +33,7 @@ QRectF WizGraphicsView::getRect()
 
 void WizGraphicsView::setRect(QRectF rect)
 {
-    m_rect = rect;
-    rectToItem();
+    updateRect(rect);
     centerOn(m_rect.center());
     qDebug() << "[Set Active Rect]:\t" << m_rect;
 }
@@ -71,13 +75,10 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
         qDebug() << "[Mouse Action]:\t" << "LeftButton Pressed";
 
         if (m_drawMode == CropMode) {
-
             // 记录鼠标的信息
             m_pressStartPosition = mapToScene(event->pos());
-
             // 检测创建item时的边界
             correctPointInsideScene(m_pressStartPosition);
-
             m_cursorPosition = cursorPosition(m_rect, m_pressStartPosition);    // 记录下按下鼠标时鼠标的位置
 
             // 如果在内部，鼠标为打开的手
@@ -99,6 +100,7 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
             }
         }
         else if (m_drawMode == StampMode) {
+            m_movingStampRect = true;
 
             // 将鼠标位置视作中心坐标，生成邮戳模式下的矩形
             QPointF centerPosition = mapToScene(event->pos());
@@ -110,8 +112,7 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
             correctRectInsideScene(stampRect);
 
             // 应用矩形
-            m_rect = stampRect;
-            rectToItem();
+            updateRect(stampRect);
         }
     }
 
@@ -127,8 +128,7 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
     if (!m_pressed && m_drawMode == CropMode) {
         QPointF mousePos = mapToScene(event->pos());
         updateCursorIcon(mousePos);
-    }
-    else {
+    } else {
         // 右键拖拽视图
         if (m_draggingScene) {
             // 计算拖拽视图的变化量
@@ -140,16 +140,15 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
 
         // 移动矩形区域
         if (m_movingRect) {
-            // 使用rect推算是否碰撞到边界
+
             QPointF moveEndPosition = mapToScene(event->pos());
             QPointF delta = moveEndPosition - m_pressStartPosition;
+
             QPointF newTopLeft = m_rect.topLeft() + delta;
             QRectF newRect = QRectF(newTopLeft, m_rect.size());
 
             correctRectInsideScene(newRect);
-
-            m_rect = newRect;
-            rectToItem();
+            updateRect(newRect);
 
             m_pressStartPosition = moveEndPosition;
         }
@@ -157,9 +156,9 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
         // 创建新矩形区域
         if (m_creatingRect) {
             QPointF moveEndPosition = mousePos;
-            m_rect = QRectF(m_pressStartPosition, moveEndPosition);
-            correctQRectF(m_rect);
-            rectToItem();
+            QRectF newRect = QRectF(m_pressStartPosition, moveEndPosition);
+            correctQRectF(newRect);
+            updateRect(newRect);
         }
 
         // 调整矩形框大小
@@ -169,94 +168,37 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
             QPointF delta = moveEndPosition - m_pressStartPosition;
 
             // 根据矩形框的边界位置和鼠标移动距离计算新的矩形框尺寸
-            QRectF newRect = m_rect;
-            if (m_cursorPosition == CursorPositionTopLeft) {
-                newRect.setTopLeft(newRect.topLeft() + delta);
-                // 限制最小
-                if (newRect.height() <= 1) {
-                    qreal bottom = newRect.bottom();
-                    newRect.setTop(bottom - 1);
-                }
-                if (newRect.width() <= 1) {
-                    qreal right = newRect.right();
-                    newRect.setLeft(right - 1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionTopRight) {
-                newRect.setTopRight(newRect.topRight() + delta);
-                // 限制最小
-                if (newRect.height() <= 1) {
-                    qreal bottom = newRect.bottom();
-                    newRect.setTop(bottom - 1);
-                }
-                if (newRect.width() <= 1) {
-                    newRect.setWidth(1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionBottomLeft) {
-                newRect.setBottomLeft(newRect.bottomLeft() + delta);
-                // 限制最小
-                if (newRect.height() <= 1) {
-                    newRect.setHeight(1);
-                }
-                if (newRect.width() <= 1) {
-                    qreal right = newRect.right();
-                    newRect.setLeft(right - 1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionBottomRight) {
-                newRect.setBottomRight(newRect.bottomRight() + delta);
-                // 限制最小
-                if (newRect.height() <= 1) {
-                    newRect.setHeight(1);
-                }
-                if (newRect.width() <= 1) {
-                    newRect.setWidth(1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionTop) {
-                newRect.setTop(newRect.top() + delta.y());
-                // 限制最小
-                if (newRect.height() <= 1) {
-                    qreal bottom = newRect.bottom();
-                    newRect.setTop(bottom - 1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionBottom) {
-                newRect.setBottom(newRect.bottom() + delta.y());
-                // 限制最小
-                if (newRect.height() <= 1) {
-                    newRect.setHeight(1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionLeft) {
-                newRect.setLeft(newRect.left() + delta.x());
-                // 限制最小
-                if (newRect.width() <= 1) {
-                    qreal right = newRect.right();
-                    newRect.setLeft(right - 1);
-                }
-            }
-            else if (m_cursorPosition == CursorPositionRight) {
-                newRect.setRight(newRect.right() + delta.x());
-                // 限制最小
-                if (newRect.width() <= 1) {
-                    newRect.setWidth(1);
-                }
-            }
+            updateRect(resizeRect(delta));
 
-            // 更新矩形框和场景中的item
-            m_rect = newRect;
-            rectToItem();
             m_pressStartPosition = moveEndPosition;
+        }
+
+        // 调整邮戳模式矩形框位置
+        if (m_movingStampRect) {
+            // 将鼠标位置视作中心坐标，生成邮戳模式下的矩形
+            QPointF centerPosition = mapToScene(event->pos());
+            qreal left = centerPosition.x() - m_rect.width() / 2;
+            qreal top = centerPosition.y() - m_rect.height() / 2;
+            QRectF stampRect = QRectF(left, top, m_rect.width(), m_rect.height());
+
+            // 边界检测和修正
+            correctRectInsideScene(stampRect);
+
+            // 应用矩形
+            updateRect(stampRect);
         }
     }
 }
 
 void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << "[Mouse Release]:\t" << m_rect;
+    //对数据进行整型化
+    correctRectInteger(m_rect);
+    rectToItem();
 
+    qDebug() << "[Mouse Action]:\tRelease" << "\n[Current Rect]:\t" << m_rect << m_rectItem->sceneBoundingRect();
+
+    // 更新状态
     if (m_draggingScene) {
         m_draggingScene = false;
     }
@@ -269,9 +211,11 @@ void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     if (m_creatingRect) {
         m_creatingRect = false;
     }
-
-    // 鼠标松开，更新状态
+    if (m_movingStampRect) {
+        m_movingStampRect = false;
+    }
     m_pressed = false;
+
     QApplication::restoreOverrideCursor();
 
     // 发送信号
@@ -412,18 +356,29 @@ void WizGraphicsView::updateCursorIcon(const QPointF & _mousePosition)
     this->setCursor(cursorIcon);
 }
 
+void WizGraphicsView::updateRect(QRectF rect)
+{
+    m_rect = rect;
+    rectToItem();
+}
+
 void WizGraphicsView::rectToItem()
 {
     QPen pen = m_rectItem->pen();
     qreal borderSize = pen.widthF();
-    QRectF newRect = QRectF(0, 0, m_rect.width() - borderSize, m_rect.height() - borderSize);
+    QRectF newRect = QRectF(0, 0, m_rect.width() + borderSize, m_rect.height() + borderSize);
     m_rectItem->setRect(newRect);
-    m_rectItem->setPos(m_rect.x() + borderSize / 2, m_rect.y() + borderSize / 2);
-    qDebug() << "[RectItem To Rect]:\t" << m_rectItem->sceneBoundingRect() << m_rect;
+    m_rectItem->setPos(m_rect.x() - borderSize / 2, m_rect.y() - borderSize / 2);
+    qDebug() << "[Rect To RectItem]:\t"  << m_rect << m_rectItem->sceneBoundingRect();
 }
 void WizGraphicsView::itemToRect()
 {
-    m_rect = m_rectItem->sceneBoundingRect();
+    QRectF rect = m_rectItem->sceneBoundingRect();
+    QPen pen = m_rectItem->pen();
+    double borderSize = pen.widthF();
+
+    m_rect = QRectF(rect.x() - borderSize, rect.y() - borderSize, rect.width(), rect.height());
+    qDebug() << "[RectItem To Rect]:\t" << m_rectItem->sceneBoundingRect() << m_rect;
 }
 bool WizGraphicsView::isPointNearSide(const int sideCoordinate, const int pointCoordinate)
 {
@@ -486,6 +441,103 @@ void WizGraphicsView::correctPointInsideScene(QPointF& point)
         point.setY(m_sceneRect.bottom());
 }
 
+void WizGraphicsView::correctPointInteger(QPointF& point)
+{
+    point.setX(int(point.x()));
+    point.setY(int(point.y()));
+}
+
+void WizGraphicsView::correctRectInteger(QRectF& rect)
+{
+    int x = qRound(rect.x());
+    int y = qRound(rect.y());
+    int w = qRound(rect.width());
+    int h = qRound(rect.height());
+
+    rect = QRectF(x, y, w, h);
+}
+
+QRectF WizGraphicsView::resizeRect(QPointF delta)
+{
+    // 根据矩形框的边界位置和鼠标移动距离计算新的矩形框尺寸
+    QRectF newRect = m_rect;
+    if (m_cursorPosition == CursorPositionTopLeft) {
+        newRect.setTopLeft(newRect.topLeft() + delta);
+        // 限制最小
+        if (newRect.height() <= 1) {
+            qreal bottom = newRect.bottom();
+            newRect.setTop(bottom - 1);
+        }
+        if (newRect.width() <= 1) {
+            qreal right = newRect.right();
+            newRect.setLeft(right - 1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionTopRight) {
+        newRect.setTopRight(newRect.topRight() + delta);
+        // 限制最小
+        if (newRect.height() <= 1) {
+            qreal bottom = newRect.bottom();
+            newRect.setTop(bottom - 1);
+        }
+        if (newRect.width() <= 1) {
+            newRect.setWidth(1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionBottomLeft) {
+        newRect.setBottomLeft(newRect.bottomLeft() + delta);
+        // 限制最小
+        if (newRect.height() <= 1) {
+            newRect.setHeight(1);
+        }
+        if (newRect.width() <= 1) {
+            qreal right = newRect.right();
+            newRect.setLeft(right - 1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionBottomRight) {
+        newRect.setBottomRight(newRect.bottomRight() + delta);
+        // 限制最小
+        if (newRect.height() <= 1) {
+            newRect.setHeight(1);
+        }
+        if (newRect.width() <= 1) {
+            newRect.setWidth(1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionTop) {
+        newRect.setTop(newRect.top() + delta.y());
+        // 限制最小
+        if (newRect.height() <= 1) {
+            qreal bottom = newRect.bottom();
+            newRect.setTop(bottom - 1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionBottom) {
+        newRect.setBottom(newRect.bottom() + delta.y());
+        // 限制最小
+        if (newRect.height() <= 1) {
+            newRect.setHeight(1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionLeft) {
+        newRect.setLeft(newRect.left() + delta.x());
+        // 限制最小
+        if (newRect.width() <= 1) {
+            qreal right = newRect.right();
+            newRect.setLeft(right - 1);
+        }
+    }
+    else if (m_cursorPosition == CursorPositionRight) {
+        newRect.setRight(newRect.right() + delta.x());
+        // 限制最小
+        if (newRect.width() <= 1) {
+            newRect.setWidth(1);
+        }
+    }
+    return newRect;
+}
+
 void WizGraphicsView::clearRectItemList()
 {
     for (auto it = m_rectItemsList.begin(); it != m_rectItemsList.end(); ++ it) {
@@ -493,3 +545,5 @@ void WizGraphicsView::clearRectItemList()
     }
     m_rectItemsList.clear();
 }
+
+

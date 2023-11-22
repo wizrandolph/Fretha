@@ -101,6 +101,7 @@ private:
     cv::Mat matCorr[3];
     double exposureTime[3];
     double ratio[7];
+    // Ed, Rad, Ea, Rda, Aest, Dest, Afree, Dfree
     cv::Mat matRst[6];
     cv::Mat matTmp;
     cv::Mat mask;

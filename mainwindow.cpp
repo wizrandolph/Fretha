@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) , ui(new Ui::MainW
     loadLastRatio();
 
     // 连接信号和槽
-    connectSignalsAndSlots();
+    initSignalsAndSlots();
 
     // 初始化界面
     initUICharts();  // 将类成员中的 QChartView 初始化后加入到界面中
@@ -1093,6 +1093,38 @@ void MainWindow::initUI()
     ui->pushButtonBin->setCheckable(true);
 }
 
+/**
+ * @brief MainWindow::initSignalsAndSlots 初始化信号与槽函数
+ */
+void MainWindow::initSignalsAndSlots()
+{
+    // 设置tableView的信号与槽函数
+    connect(ui->tableView, &QTableView::clicked, [=](const QModelIndex& index) {
+        QModelIndex newIndex = index;
+        changeView(newIndex);
+    });
+    // 设置tableViewResult的信号与槽函数
+    connect(ui->tableRecord, &QTableView::clicked, [=](const QModelIndex& index) {
+        QModelIndex newIndex = index;
+        trackRect(newIndex);
+    });
+
+    // 设置comboBoxView的信号与槽函数
+    connect(ui->comboBoxViewType, SIGNAL(currentIndexChanged(int)), this, SLOT(comboBoxViewTypeChanged(int)));
+    connect(ui->comboBoxDrawMode, SIGNAL(currentIndexChanged(int)), this, SLOT(comboBoxDrawModeChanged(int)));
+
+    // 绘图完成
+    connect(ui->graphicsView, SIGNAL(mouseReleased(QRectF)), this, SLOT(updateStatusBar(QRectF)));
+
+    // 记录页面索引
+    QObject::connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this](int index){
+        m_currentPageIndex = index;
+    });
+
+    // 设置快捷键
+    setupShortcuts();
+}
+
 void MainWindow::initAllCharts()
 {
     ChartName chartNames[6] = {
@@ -1477,34 +1509,5 @@ void MainWindow::setupShortcuts()
     });
 }
 
-/**
- * @brief MainWindow::connectSignalsAndSlots 连接信号和槽
- */
-void MainWindow::connectSignalsAndSlots()
-{
-    // 设置tableView的信号与槽函数
-    connect(ui->tableView, &QTableView::clicked, [=](const QModelIndex& index) {
-        QModelIndex newIndex = index;
-        changeView(newIndex);
-    });
-    // 设置tableViewResult的信号与槽函数
-    connect(ui->tableRecord, &QTableView::clicked, [=](const QModelIndex& index) {
-        QModelIndex newIndex = index;
-        trackRect(newIndex);
-    });
 
-    // 设置comboBoxView的信号与槽函数
-    connect(ui->comboBoxViewType, SIGNAL(currentIndexChanged(int)), this, SLOT(comboBoxViewTypeChanged(int)));
-    connect(ui->comboBoxDrawMode, SIGNAL(currentIndexChanged(int)), this, SLOT(comboBoxDrawModeChanged(int)));
 
-    // 绘图完成
-    connect(ui->graphicsView, SIGNAL(mouseReleased(QRectF)), this, SLOT(updateStatusBar(QRectF)));
-
-    // 记录页面索引
-    QObject::connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this](int index){
-        m_currentPageIndex = index;
-    });
-
-    // 设置快捷键
-    setupShortcuts();
-}

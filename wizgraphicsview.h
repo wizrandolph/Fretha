@@ -38,7 +38,7 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 private:
     QGraphicsScene *m_scene;
-    QGraphicsRectItem *m_rectItem;
+    QGraphicsRectItem *m_rectItem;  // 仅显示
     QList<QGraphicsRectItem*> m_rectItemsList;
     QPointF m_pressStartPosition;
 
@@ -48,8 +48,9 @@ private:
     bool m_resizingRect = false;    // 调整Rect大小
     bool m_movingRect = false;  // 移动Rect
     bool m_creatingRect = false; // 创建Rect
+    bool m_movingStampRect = false;
 
-    QRectF m_rect;
+    QRectF m_rect = QRectF(0, 0, 50, 50);
     QRectF m_sceneRect;
     CursorPosition m_cursorPosition;
 
@@ -57,6 +58,7 @@ private:
 
     CursorPosition cursorPosition(const QRectF& cropRect, const QPointF& mousePosition);
     void updateCursorIcon(const QPointF& _mousePosition);
+    void updateRect(QRectF rect);
     void rectToItem();
     void itemToRect();
     bool isPointNearSide(const int _sideCoordinate, const int _pointCoordinate);
@@ -64,6 +66,9 @@ private:
     void correctQRectF(QRectF& rect);
     void correctRectInsideScene(QRectF& rect);
     void correctPointInsideScene(QPointF& point);
+    void correctPointInteger(QPointF& point);
+    void correctRectInteger(QRectF& rect);
+    QRectF resizeRect(QPointF delta);
 
 signals:
     void mouseReleased(QRectF);

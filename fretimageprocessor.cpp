@@ -196,7 +196,7 @@ void FretImageProcessor::calc3CubeFret() {
  * 保存结果在Dest和Aest
  */
 void FretImageProcessor::calc2Hybrid() {
-    //计算估计浓度
+    // 计算估计浓度
     double Ma = ratio[G] * ratio[Y] / ratio[D];
     matRst[Dest] = ratio[D] * matCorr[DD] / (1 - matRst[Ed]);
     matRst[Aest] = ratio[A] * (matCorr[AA] - ratio[C] * matCorr[DD]) / Ma;

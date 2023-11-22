@@ -47,8 +47,12 @@ private:
 
     Ui::MainWindow *ui;
 
-    void connectSignalsAndSlots();
+
     void loadLastRatio();
+    void initSignalsAndSlots();
+    void initUICharts();
+    void initUI();
+    void initAllCharts();
 
     bool checkPathLegal(QString path);
 
@@ -69,11 +73,6 @@ private:
 
     void changeView(QModelIndex &index);
     void trackRect(QModelIndex &index);
-
-    void initUICharts();
-    void initUI();
-
-    void initAllCharts();
 
     void updateResultInterface();
     void updateThaCharts();
