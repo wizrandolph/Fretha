@@ -63,7 +63,6 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
 
     // 鼠标右键
     if (event->button() == Qt::RightButton) {
-
         qDebug() << "[Mouse Action]:\t" << "RightButton Pressed";
 
         m_draggingScene = true;
@@ -71,7 +70,6 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
         QApplication::setOverrideCursor(Qt::ClosedHandCursor);
     }
     else if (event->button() == Qt::LeftButton) {
-
         qDebug() << "[Mouse Action]:\t" << "LeftButton Pressed";
 
         if (m_drawMode == CropMode) {
@@ -180,12 +178,8 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
             qreal left = centerPosition.x() - m_rect.width() / 2;
             qreal top = centerPosition.y() - m_rect.height() / 2;
             QRectF stampRect = QRectF(left, top, m_rect.width(), m_rect.height());
-
-            // 边界检测和修正
-            correctRectInsideScene(stampRect);
-
-            // 应用矩形
-            updateRect(stampRect);
+            correctRectInsideScene(stampRect);            // 边界检测和修正
+            updateRect(stampRect);            // 应用矩形
         }
     }
 }
@@ -318,11 +312,11 @@ CursorPosition WizGraphicsView::cursorPosition(const QRectF& cropRect, const QPo
     return cursorPosition;
 }
 
-void WizGraphicsView::updateCursorIcon(const QPointF & _mousePosition)
+void WizGraphicsView::updateCursorIcon(const QPointF & mousePosition)
 {
     QCursor cursorIcon;
     //
-    switch (cursorPosition(m_rect, _mousePosition))
+    switch (cursorPosition(m_rect, mousePosition))
     {
         case CursorPositionTopRight:
         case CursorPositionBottomLeft:
@@ -369,16 +363,6 @@ void WizGraphicsView::rectToItem()
     QRectF newRect = QRectF(0, 0, m_rect.width() + borderSize, m_rect.height() + borderSize);
     m_rectItem->setRect(newRect);
     m_rectItem->setPos(m_rect.x() - borderSize / 2, m_rect.y() - borderSize / 2);
-    qDebug() << "[Rect To RectItem]:\t"  << m_rect << m_rectItem->sceneBoundingRect();
-}
-void WizGraphicsView::itemToRect()
-{
-    QRectF rect = m_rectItem->sceneBoundingRect();
-    QPen pen = m_rectItem->pen();
-    double borderSize = pen.widthF();
-
-    m_rect = QRectF(rect.x() - borderSize, rect.y() - borderSize, rect.width(), rect.height());
-    qDebug() << "[RectItem To Rect]:\t" << m_rectItem->sceneBoundingRect() << m_rect;
 }
 bool WizGraphicsView::isPointNearSide(const int sideCoordinate, const int pointCoordinate)
 {
@@ -391,6 +375,10 @@ bool WizGraphicsView::isPointOutsideRect(const QRectF& rect, const QPointF& poin
     return point.x() < rect.left() - indent || point.x() > rect.right() + indent || point.y() < rect.top() - indent || point.y() > rect.bottom() + indent;
 }
 
+/**
+ * @brief WizGraphicsView::correctQRectF 修正负数宽高
+ * @param rect
+ */
 void WizGraphicsView::correctQRectF(QRectF& rect)
 {
     int x, y, w, h;
@@ -413,6 +401,10 @@ void WizGraphicsView::correctQRectF(QRectF& rect)
     rect = QRectF(x, y, w, h);
 }
 
+/**
+ * @brief WizGraphicsView::correctRectInsideScene 检查rect是否超出场景范围，如果是，那么自适应其边界
+ * @param rect
+ */
 void WizGraphicsView::correctRectInsideScene(QRectF& rect)
 {
     if (rect.left() < m_sceneRect.left()) {

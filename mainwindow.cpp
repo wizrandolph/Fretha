@@ -82,7 +82,7 @@ void MainWindow::on_pushButtonAuto_clicked()
         return;
     }
 
-    m_savePath = strPath + "\\THA_Result";
+    m_savePath = strPath + "/THA_Result";
     fretThaSolver->setBatchPath(strPath);
     showProgressDialog("请等待数据处理...");
     connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
@@ -176,7 +176,7 @@ void MainWindow::on_pushButtonSave_clicked()
     {
         QPixmap pixmap = m_chartView[i]->grab();
         QImage image = pixmap.toImage();
-        image.save(folderPath + "\\" + filename[i]);
+        image.save(folderPath + "/" + filename[i]);
     }
 
     // 弹出保存完成提示框
@@ -451,12 +451,10 @@ void MainWindow::on_pushButtonAdd_clicked()
     double foreGround[3];
 
     // 获取灰度值
-    for (int i = 0; i < 3; ++ i)
-    {
+    for (int i = 0; i < 3; ++ i) {
         fretImageProcessor->setRoi(x, y, w, h);
         foreGround[i] = fretImageProcessor->getRoiGrayValue((ChannelName)i);
     }
-    // 用来判断数据是否正常
 
     double valEd = fretCalculator->getResult(Ed);
     double valRad = fretCalculator->getResult(Rad);
@@ -470,9 +468,9 @@ void MainWindow::on_pushButtonAdd_clicked()
     // 如果能够完成数据的计算，那么会向结果列表中添加当前数据
     QModelIndex index = model->index(cnt, 0);
 
-    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[AA])));
-    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DA])));
-    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DD])));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[AA] - fretImageProcessor->getBackgroundGray(AA))));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DA] - fretImageProcessor->getBackgroundGray(DA))));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DD] - fretImageProcessor->getBackgroundGray(DD))));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEd)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valRad)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEa)));
@@ -487,7 +485,6 @@ void MainWindow::on_pushButtonAdd_clicked()
     model->setRowCount(cnt + 1);
 
     ui->tableRecord->setCurrentIndex(index);
-
 
     // 设置表格格式
     QHeaderView *headerR = ui->tableRecord->horizontalHeader(); // 获取水平表头对象
@@ -762,7 +759,7 @@ void MainWindow::on_pushButtonCalc_clicked()
         fretThaSolver->expandFretData(valEd, valEa, valRad, valRda, valAest, valDest);
     }
 
-    m_savePath = m_globalPath + "\\THA_Result";
+    m_savePath = m_globalPath + "/THA_Result";
 
     fretThaSolver->performTwoHybridMatlab();
     fretThaSolver->performTwoHybridMatlabBin(0, 5, 0.1);
@@ -806,44 +803,43 @@ void MainWindow::on_pushButtonImportScreen_clicked()
 {
     QStandardItemModel *model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
     if (model == nullptr) {
-        qDebug() << "[Exit Manually Draw]:\tModel Not Found";
+        qDebug() << "[Import Manual Data]:\tFailed: Model Not Found";
         return;
     }
 
     // 非测试
     QString csvPath = getOpenCsvFilePath();
 
-
     initRecordTableModel();
     int cnt = model->rowCount();
+    model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
+    if (model == nullptr) {
+        qDebug() << "[Import Manual Data]:\tFailed: Model Not Found";
+        return;
+    }
 
     QFile file(csvPath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qDebug() << "[Import Manual Data]:\tFailed: Cannot Open File";
         return;
+    }
 
     QTextStream in(&file);
-    bool isHeader = true;
+    in.readLine();
     while (!in.atEnd()) {
         QString line = in.readLine();
         QStringList fields = line.split(",");
         if (fields.size() != 15) {
             return;
         }
-        if (fields.size() >= 13 && !isHeader) {
-            int columnIndex = 0;
-            int i = 1;
-            for (; i < fields.size(); ++ i)
-            {
-                model->setItem(cnt, columnIndex ++, new QStandardItem(fields.at(i)));
-            }
-            model->setRowCount(++ cnt);
+        int column = 0;
+        int i = 1; // 第一列是序号列
+        for (; i < fields.size(); ++ i) {
+            model->setItem(cnt, column ++, new QStandardItem(fields.at(i)));
         }
-        isHeader = false;
+        model->setRowCount(++ cnt);
     }
-    // 设置表格只能点击不能进入编辑状态
-    ui->tableRecord->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    // 设置只能选择整行
-    ui->tableRecord->setSelectionBehavior(QAbstractItemView::SelectRows);
+
     // 自动调整所有列的宽度以适应内容
     ui->tableRecord->resizeColumnsToContents();
     file.close();
@@ -960,7 +956,7 @@ QImage MainWindow::getImageToShow()
         return m_image2Show;
     }
 
-    QString tmpFilePath = m_tmpDirPath + "\\tmp.jpg";
+    QString tmpFilePath = m_tmpDirPath + "/tmp.jpg";
     cv::imwrite(tmpFilePath.toStdString(), cvImage);
     qtImage = QImage(tmpFilePath);
 
@@ -1001,7 +997,7 @@ void MainWindow::changeView(QModelIndex &index)
         }
 
         // 切换为视野的图片内容
-        m_currentViewPath = m_globalPath + "\\" + viewName;
+        m_currentViewPath = m_globalPath + "/" + viewName;
         currentViewName = viewName;
         qDebug() << "[Change View]:\t" << m_currentViewPath;
         fretImageProcessor->loadSourceData(m_currentViewPath);

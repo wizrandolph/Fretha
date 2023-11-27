@@ -31,7 +31,6 @@ public:
     void clearRectItemList();
 
 protected:
-    // 设置鼠标事件
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -46,9 +45,9 @@ private:
 
     bool m_draggingScene = false;   // 右键拖拽
     bool m_resizingRect = false;    // 调整Rect大小
-    bool m_movingRect = false;  // 移动Rect
-    bool m_creatingRect = false; // 创建Rect
-    bool m_movingStampRect = false;
+    bool m_movingRect = false;  // 移动 Rect
+    bool m_creatingRect = false; // 创建 Rect
+    bool m_movingStampRect = false;     // 移动 Stamp 模式下的 Rect
 
     QRectF m_rect = QRectF(0, 0, 50, 50);
     QRectF m_sceneRect;
@@ -60,7 +59,6 @@ private:
     void updateCursorIcon(const QPointF& _mousePosition);
     void updateRect(QRectF rect);
     void rectToItem();
-    void itemToRect();
     bool isPointNearSide(const int _sideCoordinate, const int _pointCoordinate);
     bool isPointOutsideRect(const QRectF& _rect, const QPointF& _point);
     void correctQRectF(QRectF& rect);

@@ -20,7 +20,6 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    // THASolver *solver = new THASolver(); // 自2023年11月7日弃用
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 

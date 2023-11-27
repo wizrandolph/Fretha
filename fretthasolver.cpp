@@ -73,7 +73,6 @@ std::vector<Point2D> getConnectedComponentCentroids(const cv::Mat& mask) {
 
     return centroids;
 }
-
 /*******************质心算法结尾********************/
 
 FretThaSolver::FretThaSolver()
