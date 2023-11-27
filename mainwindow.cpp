@@ -32,7 +32,7 @@ static bool checkChannelImages(const QString& folderPath)
 
     if (!dir.exists())
     {
-        qDebug() << "Invalid folder path.";
+        qDebug() << "[Check ]" << "Invalid folder path";
         return false;
     }
 
@@ -287,7 +287,7 @@ void MainWindow::on_pushButtonManu_clicked()
 
     // 检查目录是否正确
     m_globalPath = ui->lineEditPath->text();
-    qDebug() << m_globalPath;
+    qDebug() << "[Manually Screen]:\t" << m_globalPath;
     if (!checkPathLegal(m_globalPath)) return;
 
     initViewTableModel(m_globalPath);
@@ -440,11 +440,11 @@ void MainWindow::on_pushButtonAdd_clicked()
     // 获取ROI
     QRectF rectf = ui->graphicsView->getRect();
     ui->graphicsView->addItem(rectf);   // 记录到图形场景中
-    double x, y, w, h;
-    x = rectf.x();
-    y = rectf.y();
-    w = rectf.width();
-    h = rectf.height();
+    int x, y, w, h;
+    x = qRound(rectf.x());
+    y = qRound(rectf.y());
+    w = qRound(rectf.width());
+    h = qRound(rectf.height());
     int cnt = model->rowCount();
     qDebug() << "[Add Data]:\t" << x << y << w << h;
 
@@ -481,7 +481,7 @@ void MainWindow::on_pushButtonAdd_clicked()
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(y)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(w)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(h)));
-    model->setItem(cnt, columnIndex ++, new QStandardItem(currentViewName));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(m_currentViewName));
     model->setRowCount(cnt + 1);
 
     ui->tableRecord->setCurrentIndex(index);
@@ -585,7 +585,7 @@ void MainWindow::initRecordTableModel()
                                "Height",
                                "View"};
     if (columnCount != tableHeader.size()) {
-        qDebug() << "表头数量不匹配";
+        qDebug() << "[Headers Count Dismatch]";
         return;
     }
     QStandardItemModel *modelR = new QStandardItemModel(this);
@@ -983,7 +983,16 @@ void MainWindow::changeView(QModelIndex &index)
         return;
     }
 
-    if (ui->tableView->model()->data(secondColumnIndex).toString() != "Unknown") {
+    if (ui->tableView->model()->data(secondColumnIndex).toString() != "Others") {
+
+        // 切换为视野的图片内容
+        QString lastPath = m_currentViewPath;
+        QString path = m_globalPath + "/" + viewName;
+        fretImageProcessor->loadSourceData(path);
+        if (!fretImageProcessor->isDataLoaded()) {
+            fretImageProcessor->loadSourceData(lastPath);
+            return;
+        }
 
         // 修改该行的第三列数据为"Yes"
         QModelIndex thirdColumnIndex = ui->tableView->model()->index(row, 2);
@@ -998,7 +1007,7 @@ void MainWindow::changeView(QModelIndex &index)
 
         // 切换为视野的图片内容
         m_currentViewPath = m_globalPath + "/" + viewName;
-        currentViewName = viewName;
+        m_currentViewName = viewName;
         qDebug() << "[Change View]:\t" << m_currentViewPath;
         fretImageProcessor->loadSourceData(m_currentViewPath);
 

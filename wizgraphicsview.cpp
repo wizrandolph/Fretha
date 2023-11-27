@@ -190,7 +190,7 @@ void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     correctRectInteger(m_rect);
     rectToItem();
 
-    qDebug() << "[Mouse Action]:\tRelease" << "\n[Current Rect]:\t" << m_rect << m_rectItem->sceneBoundingRect();
+    qDebug() << "[Mouse Action]:\t" << "Release\n[Current Rect]:\t" << m_rect << m_rectItem->sceneBoundingRect();
 
     // 更新状态
     if (m_draggingScene) {
