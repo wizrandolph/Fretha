@@ -6,6 +6,7 @@
 #include <QString>
 #include <QDir>
 #include <QThread>
+#include <QMap>
 
 #include <math.h>
 #include <random>
@@ -47,13 +48,14 @@ public:
     // 数据变量
     std::vector<double> vecGrayData[3]; // 三个数组，保存灰度值
     std::vector<double> vecFretData[8]; // 六个数组，保存 FRET 计算结果
-    std::vector<double> vecFretDataBin[8];  // 六个数组，保存分箱后的 FRET 计算结果
-    double resultsTha[4];   // 双杂交求解的参数结果
-    double resultsThaBin[4];    // 分箱以后求解双杂交的参数结果
+    std::vector<double> vecFretDataBin[8]; // 六个数组，保存分箱后的 FRET 计算结果
+    double resultsTha[4]; // 双杂交求解的参数结果
+    double resultsThaBin[4]; // 分箱以后求解双杂交的参数结果
     double resultsEdRad[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
     double resultsEaRda[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
 
     double threshRatio[3] = {3.0, 3.0, 3.0};
+    QString calcFunc;
 
 
     /* 成员方法 *****************************************************************************************/
@@ -76,18 +78,21 @@ public:
     // 设置信背比阈值系数
     void setThreshRatio(ChannelName channelName, double value);
     void setThreshRatios(double threshAA, double threshDA, double threshDD);
+    // 设置文件路径
+    void setBatchPath(QString);
     // 读取数据
     void loadSourceData(QString folderPath);
     void loadSourceData(QString pathAA, QString pathDA, QString pathDD);
     // 主要活动
+    void processOneView(QString viewFolderPath);
+    void processOneBatch(QString batchFolderPath);
     void processImageToGrayData();
     void processGrayToFretData();
-    // 设置文件路径
-    void setBatchPath(QString);
-    // 计算一个视野的数据到vecGrayData中
-    void processOneView(QString viewFodoubleerPath);
-    // 计算一批数据多个视野的数据到vecGrayData中
-    void processOneBatch(QString batchFolderPath);
+    // 生成数据
+    void generateRoiFromBatch(QString batchFolderPath);
+    void generateRoiFromView(QString viewFolderPath, QString folderName);
+    void generateRoiFromImage(QString folderName);
+
     // 执行拟合计算
     void performTwoHybridMatlab();  // matlab求解规划
     void performTwoHybridMatlabBin(double min, double max, double interval);
@@ -95,7 +100,6 @@ public:
     // 返回最值
     double maxData(CalcResult dataName);
     double maxBinData(CalcResult dataName);
-
 
     /* 数据处理的子函数*************************************************************************************************/
 
@@ -108,7 +112,8 @@ public:
     // 数据封箱
     int binData(double min, double max, double interval);
     // 主活动，在多线程中执行
-    void mainActivity();
+    void autoProcessActivity();
+    void autoGenerateActivity();
 
 protected:
     void run();
@@ -117,6 +122,8 @@ signals:
     void thaFinished();
     // 定义信号发送进度信息
     void progressChanged(int value);
+    // 定义发送数据的信号
+    void sendData(const QMap<TableHeader, QString> &data);
 
 };
 

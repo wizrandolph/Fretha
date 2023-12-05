@@ -311,7 +311,7 @@ void FretThaSolver::processImageToGrayData()
     bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
     bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
     maskSbr = FretImageProcessor::normalizeByMinMax(maskSbr8U);
-    cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
+    //cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
 
     // 按照我们设计的算法生成评价结果
     Mat maskStd;
@@ -320,30 +320,30 @@ void FretThaSolver::processImageToGrayData()
 
         Mat matStd = FretImageProcessor::localStandardDeviation(matFiltered[i], 5);
         Mat matStd8U = FretImageProcessor::normalizeByMinMax8U(matStd);
-        cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
+        //cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
 
         Mat matStdMinima = FretImageProcessor::findLocalMinima(matStd8U);
         Mat matStdMinima8U = FretImageProcessor::normalizeByMinMax8U(matStdMinima);
-        cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
+        //cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
 
         Mat matStdMinimaLap = FretImageProcessor::findLocalMinimaLaplacian(matStd8U);
         Mat matStdMinimaLap8U = FretImageProcessor::normalizeByMinMax8U(matStdMinimaLap);
-        cv::imwrite((viewFolderPath + "/StdLocalMinimaLaplacian" + QString::number(i) + ".tif").toStdString(), matStdMinimaLap8U);
+        //cv::imwrite((viewFolderPath + "/StdLocalMinimaLaplacian" + QString::number(i) + ".tif").toStdString(), matStdMinimaLap8U);
 
         scoreStd = scoreStd + FretImageProcessor::normalizeByMinMax(matStdMinima);
     }
 
     Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
-    cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
+    //cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
     cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     maskStd.convertTo(maskStd, CV_8U);
-    cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
+    //cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
 
     // 合成最后的结果
     Mat maskUlt, scoreMat;
     scoreMat = maskSbr.mul(scoreStd);
     bitwise_and(maskSbr8U, maskStd, maskUlt);
-    cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
+    //cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
 
     // 计算质心
     std::vector<Point2D> centroids = getConnectedComponentCentroids(maskUlt);
@@ -544,6 +544,148 @@ double FretThaSolver::maxBinData(CalcResult dataName)
     else return 1;
 }
 
+void FretThaSolver::generateRoiFromBatch(QString batchFolderPath)
+{
+    qDebug() << "[Processing Batch]:\t" << batchFolderPath;
+    this->batchFolderPath = batchFolderPath;
+
+    // 检查目录是否存在
+    QDir batchDir(batchFolderPath);
+    if (!batchDir.exists()) return;
+
+    // 对目录下的每个子文件夹进行处理
+    QFileInfoList folderlist = batchDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (int i = 0; i < folderlist.size(); ++ i) {
+        // 处理一个视野的数据，扩展进灰度数据中
+        generateRoiFromView(folderlist.at(i).absoluteFilePath(), folderlist.at(i).fileName());
+    }
+}
+
+void FretThaSolver::generateRoiFromView(QString viewFolderPath, QString viewName)
+{
+    qDebug() << "[Processing View]:\t" << viewFolderPath;
+    this->viewFolderPath = viewFolderPath;
+    // 使用图像处理类读入数据,检查数据完整性
+    imageProcessor->loadSourceData(viewFolderPath);
+    if (imageProcessor->isDataLoaded()) {
+        // 处理数据
+        generateRoiFromImage(viewName);   // 从图片中取得灰度值
+    }
+    else {
+        qDebug() << "[Expand Gray Data]:\tFailed";
+    }
+}
+
+void FretThaSolver::generateRoiFromImage(QString viewName)
+{
+    using namespace cv;
+
+    // 赋值图片数据
+    Mat matSrc[3];
+    for (int i = 0; i < 3; ++ i) {
+        matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
+    }
+
+    // 对数据进行均值滤波，并且计算得到背景灰度值
+    Mat matFiltered[3];
+    double grayBackground[3];
+    for (int i = 0; i < 3; ++ i) {
+        matFiltered[i] = FretImageProcessor::meanFilter16U(matSrc[i], 5);
+        grayBackground[i] = FretImageProcessor::calcBackgroundGray(matFiltered[i]);
+    }
+
+    // 根据SBR阈值进行滤波
+    double threshRatio[3] = {3.0, 3.0, 3.0};
+    Mat maskSingleChannel[3];
+    Mat maskSbr, maskSbr8U;    // 0-1
+    for (int i = 0; i < 3; ++ i) {
+        threshold(matFiltered[i], maskSingleChannel[i], grayBackground[i] * threshRatio[i], 255, THRESH_BINARY);
+        maskSingleChannel[i].convertTo(maskSingleChannel[i], CV_8U);
+    }
+    bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
+    bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
+    maskSbr = FretImageProcessor::normalizeByMinMax(maskSbr8U);
+    //cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
+
+    // 按照我们设计的算法生成评价结果
+    Mat maskStd;
+    Mat scoreStd(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
+    for (int i = 0; i < 3; ++ i) {
+
+        Mat matStd = FretImageProcessor::localStandardDeviation(matFiltered[i], 5);
+        Mat matStd8U = FretImageProcessor::normalizeByMinMax8U(matStd);
+        //cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
+
+        Mat matStdMinima = FretImageProcessor::findLocalMinima(matStd8U);
+        Mat matStdMinima8U = FretImageProcessor::normalizeByMinMax8U(matStdMinima);
+        //cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
+
+        Mat matStdMinimaLap = FretImageProcessor::findLocalMinimaLaplacian(matStd8U);
+        Mat matStdMinimaLap8U = FretImageProcessor::normalizeByMinMax8U(matStdMinimaLap);
+        //cv::imwrite((viewFolderPath + "/StdLocalMinimaLaplacian" + QString::number(i) + ".tif").toStdString(), matStdMinimaLap8U);
+
+        scoreStd = scoreStd + FretImageProcessor::normalizeByMinMax(matStdMinima);
+    }
+
+    Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
+    //cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
+    cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    maskStd.convertTo(maskStd, CV_8U);
+    //cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
+
+    // 合成最后的结果
+    Mat maskUlt, scoreMat;
+    scoreMat = maskSbr.mul(scoreStd);
+    bitwise_and(maskSbr8U, maskStd, maskUlt);
+    //cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
+
+    // 计算质心
+    std::vector<Point2D> centroids = getConnectedComponentCentroids(maskUlt);
+    int kernel_size = 5;
+
+    for (const auto& centroid : centroids) {
+        int x = centroid.x;
+        int y = centroid.y;
+        double valGrayAA = matFiltered[AA].at<ushort>(y, x) - grayBackground[AA];
+        double valGrayDA = matFiltered[DA].at<ushort>(y, x) - grayBackground[DA];
+        double valGrayDD = matFiltered[DD].at<ushort>(y, x) - grayBackground[DD];
+        // 使用calculator进行计算
+        calculator->loadCorrectedGray(valGrayAA, valGrayDA, valGrayDD);
+        calculator->calcData();
+        if (!calculator->isDataCalculated()) continue;
+        // 获取数据
+        double valEa = calculator->getResult(Ea);
+        double valEd = calculator->getResult(Ed);
+        double valRad = calculator->getResult(Rad);
+        double valRda = calculator->getResult(Rda);
+        double valAest = calculator->getResult(Aest);
+        double valDest = calculator->getResult(Dest);
+        int rectx = x - kernel_size / 2;
+        int recty = y - kernel_size / 2;
+        int rectw = kernel_size;
+        int recth = kernel_size;
+
+        QMap<TableHeader, QString> map;
+        map.insert(TABLE_HEADER_IAA, QString::number(valGrayAA));
+        map.insert(TABLE_HEADER_IDA, QString::number(valGrayDA));
+        map.insert(TABLE_HEADER_IDD, QString::number(valGrayDD));
+        map.insert(TABLE_HEADER_EA, QString::number(valEa));
+        map.insert(TABLE_HEADER_ED, QString::number(valEd));
+        map.insert(TABLE_HEADER_RAD, QString::number(valRad));
+        map.insert(TABLE_HEADER_RDA, QString::number(valRda));
+        map.insert(TABLE_HEADER_AEST, QString::number(valAest));
+        map.insert(TABLE_HEADER_DEST, QString::number(valDest));
+        map.insert(TABLE_HEADER_RECTX, QString::number(rectx));
+        map.insert(TABLE_HEADER_RECTY, QString::number(recty));
+        map.insert(TABLE_HEADER_RECTW, QString::number(rectw));
+        map.insert(TABLE_HEADER_RECTH, QString::number(recth));
+        map.insert(TABLE_HEADER_VIEW, viewName);
+
+        // qDebug() <<
+        emit sendData(map);
+    }
+}
+
 int FretThaSolver::binData(double min, double max, double interval)
 {
     using namespace std;
@@ -596,9 +738,9 @@ int FretThaSolver::binData(double min, double max, double interval)
     return cnt;
 }
 
-void FretThaSolver::mainActivity()
+void FretThaSolver::autoProcessActivity()
 {
-    qDebug() << "[THA Solution Start]";
+    qDebug() << "[Auto Process Data Start]";
     void clearGrayData();
     void clearFretData();
     void clearFretDataBin();
@@ -609,6 +751,12 @@ void FretThaSolver::mainActivity()
     performTwoHybridMatlab();
     performTwoHybridLinear();
     performTwoHybridMatlabBin(0, 5, 0.1);
+}
+
+void FretThaSolver::autoGenerateActivity()
+{
+    qDebug() << "[Auto Generate Data Start]";
+    generateRoiFromBatch(batchFolderPath);
 }
 
 double FretThaSolver::calcApproach(double min, double max, const std::vector<double>& R, const std::vector<double>& E)
@@ -648,6 +796,6 @@ double FretThaSolver::leastSquare(const std::vector<std::pair<double, double>>& 
 }
 void FretThaSolver::run()
 {
-    mainActivity();
+    autoProcessActivity();
     emit thaFinished();
 }

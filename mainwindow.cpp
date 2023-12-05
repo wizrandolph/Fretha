@@ -88,12 +88,6 @@ void MainWindow::on_pushButtonAuto_clicked()
     connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
     fretThaSolver->start();
     m_dialog->exec();
-
-
-    //solver->setBatchPath(strPath);
-    //connect(solver, SIGNAL(finish()), this, SLOT(ready()));
-    //solver->start();
-
 }
 
 void MainWindow::solveFinished()
@@ -156,6 +150,23 @@ void MainWindow::updateStatusBar(QRectF rect)
     ui->lineEditStatusSbrAA->setText(QString::number(foreGround[AA] / backGround[AA]));
     ui->lineEditStatusSbrDA->setText(QString::number(foreGround[DA] / backGround[DA]));
     ui->lineEditStatusSbrDD->setText(QString::number(foreGround[DD] / backGround[DD]));
+}
+
+void MainWindow::receiveData(const QMap<TableHeader, QString> &data)
+{
+    QStandardItemModel *model = dynamic_cast<QStandardItemModel*>(ui->tableRecord->model());
+    if (model == nullptr) {
+        qDebug() << "[Import Manual Data]:\tFailed: Model Not Found";
+        return;
+    }
+
+    int cnt = model->rowCount();
+    for (int col = 0; col < 14; ++ col) {
+        QString str = data[(TableHeader)col];
+        model->setItem(cnt, col, new QStandardItem(str));
+    }
+    ui->tableRecord->resizeColumnsToContents();
+    model->setRowCount(++ cnt);
 }
 
 void MainWindow::on_pushButtonSave_clicked()
@@ -845,6 +856,11 @@ void MainWindow::on_pushButtonImportScreen_clicked()
     file.close();
 }
 
+void MainWindow::on_pushButtonAutoGen_clicked()
+{
+    fretThaSolver->generateRoiFromBatch(m_globalPath);
+}
+
 void MainWindow::on_pushButtonDelete_clicked()
 {
     QModelIndexList selectedRows = ui->tableRecord->selectionModel()->selectedRows();
@@ -996,7 +1012,7 @@ void MainWindow::changeView(QModelIndex &index)
 
         // 修改该行的第三列数据为"Yes"
         QModelIndex thirdColumnIndex = ui->tableView->model()->index(row, 2);
-        ui->tableView->model()->setData(thirdColumnIndex, "√");
+        ui->tableView->model()->setData(thirdColumnIndex, "Selected");
         // 将其他行修改为空
         for (int i = 0; i < ui->tableView->model()->rowCount(); i++) {
             if (i != row) {
@@ -1125,6 +1141,8 @@ void MainWindow::initSignalsAndSlots()
     QObject::connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this](int index){
         m_currentPageIndex = index;
     });
+
+    connect(fretThaSolver, SIGNAL(sendData(const QMap<TableHeader, QString> &)), this, SLOT(receiveData(const QMap<TableHeader, QString> &)));
 
     // 设置快捷键
     setupShortcuts();

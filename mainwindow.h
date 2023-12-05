@@ -5,6 +5,7 @@
 #include <QtCharts>
 #include <QFileDialog>
 
+#include <enumerator.h>
 #include <fretcalculator.h>
 #include <fretimageprocessor.h>
 #include <fretthasolver.h>
@@ -114,8 +115,11 @@ private slots:
     void on_pushButtonBack_clicked();
     void on_pushButtonImportScreen_clicked();
 
+    void on_pushButtonAutoGen_clicked();
+
     void solveFinished();
     void updateStatusBar(QRectF);
+    void receiveData(const QMap<TableHeader, QString> &data);
 
     void comboBoxViewTypeChanged(int index);
     void comboBoxDrawModeChanged(int index);

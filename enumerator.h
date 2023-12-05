@@ -25,6 +25,24 @@ enum CalcProcess {
 enum CalcResult {
     Ed, Rad, Ea, Rda, Aest, Dest, Afree, Dfree
 };
+
+enum TableHeader {  // 14个
+    TABLE_HEADER_IAA,
+    TABLE_HEADER_IDA,
+    TABLE_HEADER_IDD,
+    TABLE_HEADER_ED,
+    TABLE_HEADER_RAD,
+    TABLE_HEADER_EA,
+    TABLE_HEADER_RDA,
+    TABLE_HEADER_AEST,
+    TABLE_HEADER_DEST,
+    TABLE_HEADER_RECTX,
+    TABLE_HEADER_RECTY,
+    TABLE_HEADER_RECTW,
+    TABLE_HEADER_RECTH,
+    TABLE_HEADER_VIEW
+};
+
 enum ChartName
 {
     EdRad,
