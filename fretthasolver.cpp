@@ -759,6 +759,11 @@ void FretThaSolver::autoGenerateActivity()
     generateRoiFromBatch(batchFolderPath);
 }
 
+void FretThaSolver::setCalcFunc(QString str)
+{
+    calcFunc = str;
+}
+
 double FretThaSolver::calcApproach(double min, double max, const std::vector<double>& R, const std::vector<double>& E)
 {
     double sum = 0;
@@ -796,6 +801,11 @@ double FretThaSolver::leastSquare(const std::vector<std::pair<double, double>>& 
 }
 void FretThaSolver::run()
 {
-    autoProcessActivity();
+    if (calcFunc == "AutoProcess") {
+        autoProcessActivity();
+    } else if (calcFunc == "AutoGenerate") {
+        autoGenerateActivity();
+    }
+
     emit thaFinished();
 }

@@ -55,7 +55,7 @@ public:
     double resultsEaRda[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
 
     double threshRatio[3] = {3.0, 3.0, 3.0};
-    QString calcFunc;
+    QString calcFunc = "AutoProcess";
 
 
     /* 成员方法 *****************************************************************************************/
@@ -114,6 +114,8 @@ public:
     // 主活动，在多线程中执行
     void autoProcessActivity();
     void autoGenerateActivity();
+
+    void setCalcFunc(QString str);
 
 protected:
     void run();
