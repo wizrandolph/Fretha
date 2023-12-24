@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QtCharts>
 #include <QFileDialog>
+#include <QMap>
 
 #include <enumerator.h>
 #include <fretcalculator.h>

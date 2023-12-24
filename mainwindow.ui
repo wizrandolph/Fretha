@@ -190,29 +190,7 @@
                 </size>
                </property>
                <property name="text">
-                <string>手动圈点</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButtonAuto">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>200</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="styleSheet">
-                <string notr="true"/>
-               </property>
-               <property name="text">
-                <string>自动分析</string>
+                <string>开始</string>
                </property>
               </widget>
              </item>
@@ -2072,28 +2050,42 @@ FRET 双杂交分析</string>
              </size>
             </property>
             <layout class="QGridLayout" name="gridLayout_4">
-             <item row="1" column="0">
-              <widget class="QPushButton" name="pushButtonImportScreen">
-               <property name="text">
-                <string>导入数据</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QPushButton" name="pushButtonDelete">
-               <property name="text">
-                <string>删除数据</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
+             <item row="4" column="0">
               <widget class="QPushButton" name="pushButtonCalc">
                <property name="text">
                 <string>开始计算</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="0">
+              <widget class="QPushButton" name="pushButtonAdd">
+               <property name="text">
+                <string>添加数据</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QPushButton" name="pushButtonAutoGen">
+               <property name="text">
+                <string>自动圈点</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QPushButton" name="pushButtonImportScreen">
+               <property name="text">
+                <string>导入数据</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QPushButton" name="pushButtonBack">
+               <property name="text">
+                <string>退出圈点</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
               <widget class="QPushButton" name="pushButtonExport">
                <property name="text">
                 <string>导出数据</string>
@@ -2101,16 +2093,22 @@ FRET 双杂交分析</string>
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="QPushButton" name="pushButtonBack">
+              <widget class="QPushButton" name="pushButtonDelete">
                <property name="text">
-                <string>退出圈点</string>
+                <string>删除数据</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="0">
-              <widget class="QPushButton" name="pushButtonAdd">
-               <property name="text">
-                <string>添加数据</string>
+             <item row="1" column="0" colspan="2">
+              <widget class="QProgressBar" name="progressBar">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="value">
+                <number>0</number>
                </property>
               </widget>
              </item>
@@ -2125,17 +2123,6 @@ FRET 双杂交分析</string>
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1651</width>
-     <height>25</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <customwidgets>
   <customwidget>

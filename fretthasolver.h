@@ -55,7 +55,7 @@ public:
     double resultsEaRda[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
 
     double threshRatio[3] = {3.0, 3.0, 3.0};
-    QString calcFunc = "AutoProcess";
+    QString calcFunc = "AutoGenerate";
 
 
     /* 成员方法 *****************************************************************************************/
@@ -66,6 +66,7 @@ public:
     void clearFretDataBin();
     // 保存数据
     QString outputData(QString savePath);
+    QString outputResults(QString savePath);
     // 添加数据
     void expandGrayData(double Iaa, double Ida, double Idd);
     void expandFretData(double valEd, double valEa, double valRad, double valRda, double valAest, double valDest);
@@ -92,6 +93,7 @@ public:
     void generateRoiFromBatch(QString batchFolderPath);
     void generateRoiFromView(QString viewFolderPath, QString folderName);
     void generateRoiFromImage(QString folderName);
+    void cvExperiment();
 
     // 执行拟合计算
     void performTwoHybridMatlab();  // matlab求解规划

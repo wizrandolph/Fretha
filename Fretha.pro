@@ -4,6 +4,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
 
+DEFINES += QT_MESSAGELOGCONTEXT
+
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
@@ -59,6 +61,7 @@ SOURCES += \
     TwoHybridSolver/xzgeqp3.cpp \
     TwoHybridSolver/xzlarf.cpp \
     TwoHybridSolver/xzlarfg.cpp \
+    wizdebug.cpp \
     wizgraphicsview.cpp \
     wizshortcut.cpp
 
@@ -120,6 +123,7 @@ HEADERS += \
     TwoHybridSolver/xzgeqp3.h \
     TwoHybridSolver/xzlarf.h \
     TwoHybridSolver/xzlarfg.h \
+    wizdebug.h \
     wizgraphicsview.h \
     wizshortcut.h
 

@@ -228,6 +228,85 @@ double FretImageProcessor::calcBackgroundGray(cv::Mat mat) {
     return valBack;
 }
 
+cv::Mat FretImageProcessor::getLargestConnectedComponent(const cv::Mat& binaryImage) {
+    // 进行连通组件标记
+    cv::Mat labels, stats, centroids;
+    int numLabels = cv::connectedComponentsWithStats(binaryImage, labels, stats, centroids);
+
+    // 找到最大连通域的索引和面积
+    int maxArea = -1;
+    int maxAreaIndex = -1;
+    for (int i = 1; i < numLabels; i++) {
+        int area = stats.at<int>(i, cv::CC_STAT_AREA);
+        if (area > maxArea) {
+            maxArea = area;
+            maxAreaIndex = i;
+        }
+    }
+
+    // 创建一个新的二值化图像，只包含最大连通域的区域
+    cv::Mat largestComponent;
+    cv::compare(labels, maxAreaIndex, largestComponent, cv::CMP_EQ);
+
+    return largestComponent;
+}
+
+cv::Mat FretImageProcessor::enhanceImage(const cv::Mat& img, int windowSize)
+{
+    cv::Mat result = cv::Mat::zeros(img.size(), img.type());
+    int halfSize = windowSize / 2;
+
+    for(int i = 0; i < img.rows; i++)
+    {
+        for(int j = 0; j < img.cols; j++)
+        {
+            int rStart = std::max(i - halfSize, 0);
+            int rEnd = std::min(i + halfSize, img.rows - 1);
+            int cStart = std::max(j - halfSize, 0);
+            int cEnd = std::min(j + halfSize, img.cols - 1);
+
+            cv::Mat window = img(cv::Range(rStart, rEnd + 1), cv::Range(cStart, cEnd + 1));
+            double minVal, maxVal;
+            cv::minMaxLoc(window, &minVal, &maxVal);
+            result.at<ushort>(i, j) = static_cast<ushort>((static_cast<double>(img.at<ushort>(i, j) - minVal) / (maxVal - minVal)) * 65535);
+        }
+    }
+
+    return result;
+}
+
+double FretImageProcessor::calculateAverageGrayValue(const cv::Mat& grayImage, const cv::Mat& mask, cv::Point center, double distanceLimit) {
+    // 确保灰度图像和掩膜尺寸相同
+    if (grayImage.size() != mask.size()) {
+        std::cerr << "Error: Gray image and mask should have the same size!" << std::endl;
+        return 0.0;
+    }
+
+    int imageHeight = grayImage.rows;
+    int imageWidth = grayImage.cols;
+    double totalGrayValue = 0.0;
+    int count = 0;
+
+    // 遍历指定坐标周围的像素
+    for (int i = 0; i < imageHeight; i++) {
+        for (int j = 0; j < imageWidth; j++) {
+            cv::Point currentPixel(j, i);
+            double distance = cv::norm(currentPixel - center);
+
+            // 检查距离是否小于给定上限且掩膜中像素值为255
+            if (distance <= distanceLimit && mask.at<uchar>(i, j) == 255) {
+                totalGrayValue += grayImage.at<ushort>(i, j);
+                count++;
+            }
+        }
+    }
+
+    // 计算平均灰度值
+    double averageGrayValue = (count > 0) ? (totalGrayValue / count) : 0.0;
+
+    return averageGrayValue;
+}
+
 /**
  * @brief FretImageProcessor::getBackgroundGray
  * 通过统计图像的直方图，将其中频数最高的灰度值视作背景灰度值
@@ -488,7 +567,7 @@ cv::Mat FretImageProcessor::meanFilter16U(const cv::Mat& src,
 
     // 将输入图像转换为32位浮点数格式
     cv::Mat imageFloat;
-    src.convertTo(imageFloat, CV_32F);
+    src.convertTo(imageFloat, CV_64F);
 
     // 应用平均滤波
     cv::blur(imageFloat, imageFloat, cv::Size(kernelSize, kernelSize));

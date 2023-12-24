@@ -91,8 +91,13 @@ public:
     static cv::Mat findLocalMinimaLaplacian(const cv::Mat& src);
     // 边缘检测
     static cv::Mat detectEdgesBySobel(const cv::Mat& src, int kernelSize);
+    // 获取二值化图像中的最大连通域
+    static cv::Mat getLargestConnectedComponent(const cv::Mat& binaryImage);
+    static cv::Mat enhanceImage(const cv::Mat& img, int windowSize);
     // 直方图计算背景值
     static double calcBackgroundGray(cv::Mat mat);
+
+    static double calculateAverageGrayValue(const cv::Mat& grayImage, const cv::Mat& mask, cv::Point center, double distanceLimit);
 
 private:
     QString viewPath;

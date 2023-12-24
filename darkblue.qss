@@ -79,6 +79,39 @@ QLabel {
     font-family: MiSans;
     color: #ffffff;
 }
+QTableView::item {
+    border-radius: 6px;
+    padding: 5px;
+    border: 2px solid #555555;
+}
+QTableCornerButton::section {
+    padding: 5px;
+    border-radius: 6px;
+    background-color: #222222;
+}
+QHeaderView {
+    border-radius: 8px;
+    background-color: #222222;
+    border: 0;
+}
+QHeaderView::section:horizontal {
+    border-radius: 6px;
+    background-color: #333333;
+    border: 2px solid #555555;
+    font-family: MiSans;
+    font-size: 16px;
+    color: #ffffff;
+    padding: 5px;
+}
+QHeaderView::section:vertical {
+    border-radius: 6px;
+    background-color: #333333;
+    border: 2px solid #555555;
+    font-family: MiSans;
+    font-size: 16px;
+    color: #ffffff;
+    padding: 5px;
+}
 QTableView {
     background-color: #222222;
     border: 2px solid #555555;
@@ -89,32 +122,6 @@ QTableView {
     selection-background-color: #45aaf2;
     selection-color: #ffffff;
 }
-QHeaderView {
-    background-color: #222222;
-    border: 2px solid #555555;
-    border-radius: 8px;
-    font-family: MiSans;
-    font-size: 16px;
-    color: #ffffff;
-    padding: 5px;
-}
-QHeaderView::section:horizontal {
-    border-radius: 6px;
-    background-color: #333333;
-    border: 2px solid #555555;
-    font-family: MiSans;
-    font-size: 16px;
-    color: #ffffff;
-}
-QHeaderView::section:vertical {
-    border-radius: 6px;
-    background-color: #333333;
-    border: 2px solid #555555;
-    font-family: MiSans;
-    font-size: 16px;
-    color: #ffffff;
-}
-
 QScrollArea {
     background-color: #222222;
     color: #222222;
@@ -150,6 +157,7 @@ QScrollBar::handle:horizontal {
 }
 
 QScrollBar::add-line:horizontal {
+    border-radius: 8px;
     border: 2px solid grey;
     background: #222222;
     width: 20px;
@@ -157,6 +165,7 @@ QScrollBar::add-line:horizontal {
     subcontrol-origin: margin;
 }
 QScrollBar::sub-line:horizontal {
+    border-radius: 8px;
     border: 2px solid grey;
     background: #222222;
     width: 20px;
@@ -190,6 +199,7 @@ QScrollBar::handle:vertical {
 }
 
 QScrollBar::add-line:vertical {
+    border-radius: 8px;
     border: 2px solid grey;
     background: #222222;
     height: 20px;
@@ -197,6 +207,7 @@ QScrollBar::add-line:vertical {
     subcontrol-origin: margin;
 }
 QScrollBar::sub-line:vertical {
+    border-radius: 8px;
     border: 2px solid grey;
     background: #222222;
     height: 20px;
@@ -224,4 +235,5 @@ QFrame {
     border: 2px solid #555555;
     border-radius: 10px;
     background-color: #222222;
-};
+}
+;

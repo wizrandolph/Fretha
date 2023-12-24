@@ -3,6 +3,8 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) , ui(new Ui::MainWindow) {
 
+    qRegisterMetaType<QMap<TableHeader, QString>>("QMap<TableHeader, QString>");
+
     for (int i = 0; i < 6; ++ i) {
         m_chartView[i] = new QChartView(this);
     }
@@ -92,18 +94,19 @@ void MainWindow::on_pushButtonAuto_clicked()
 
 void MainWindow::solveFinished()
 {
-    ui->pushButtonBin->setChecked(false);
-    ui->pushButtonEdRc->setChecked(false);
-    ui->pushButtonTHA->setChecked(true);
-    ui->stackedWidget->setCurrentIndex(1);
-    ui->stackedWidgetResult->setCurrentIndex(0);
+//    ui->pushButtonBin->setChecked(false);
+//    ui->pushButtonEdRc->setChecked(false);
+//    ui->pushButtonTHA->setChecked(true);
+//    ui->stackedWidget->setCurrentIndex(1);
+//    ui->stackedWidgetResult->setCurrentIndex(0);
 
-    updateThaCharts();
-    updateThaBinCharts();
-    updateEdRcCharts();
-    updateResultInterface();
-
-    m_dialog->close();
+//    updateThaCharts();
+//    updateThaBinCharts();
+//    updateEdRcCharts();
+//    updateResultInterface();
+    ui->pushButtonAutoGen->setEnabled(true);
+    ui->tableRecord->resizeColumnsToContents();
+    qDebug() << "[Auto Generate Finished]: Recieved Finished Signals";
 }
 void MainWindow::updateStatusBar(QRectF rect)
 {
@@ -165,8 +168,9 @@ void MainWindow::receiveData(const QMap<TableHeader, QString> &data)
         QString str = data[(TableHeader)col];
         model->setItem(cnt, col, new QStandardItem(str));
     }
-    ui->tableRecord->resizeColumnsToContents();
+    // ui->tableRecord->resizeColumnsToContents();
     model->setRowCount(++ cnt);
+    ui->tableRecord->scrollToBottom();
 }
 
 void MainWindow::on_pushButtonSave_clicked()
@@ -174,6 +178,7 @@ void MainWindow::on_pushButtonSave_clicked()
     // 使用弹窗获取保存文件夹路径
     QString folderPath = getSaveFolderPath(this);
     QString filePath = fretThaSolver->outputData(folderPath);   // 保存后台数据
+    fretThaSolver->outputResults(folderPath);   // 保存后台数据
     m_savePath = folderPath;
 
     // 保存图表文件
@@ -189,6 +194,8 @@ void MainWindow::on_pushButtonSave_clicked()
         QImage image = pixmap.toImage();
         image.save(folderPath + "/" + filename[i]);
     }
+
+    // exportToCSV(ui->tableRecord, filePath);
 
     // 弹出保存完成提示框
     showAlertDialog("数据已保存到：\n" + filePath);
@@ -309,7 +316,7 @@ void MainWindow::on_pushButtonManu_clicked()
 //    setupShortcuts();
 
     ui->stackedWidget->setCurrentIndex(3);    // 页面跳转
-    showMaximized();    // 全屏
+    // showMaximized();    // 全屏
 }
 
 void MainWindow::loadLastRatio()
@@ -611,7 +618,7 @@ void MainWindow::initRecordTableModel()
     // 设置表格的点击行为和其他特性
     ui->tableRecord->setEditTriggers(QAbstractItemView::NoEditTriggers);    // 设置表格只能点击不能进入编辑状态
     ui->tableRecord->setSelectionBehavior(QAbstractItemView::SelectRows);    // 设置表格只能选择一整行
-    ui->tableRecord->verticalHeader()->setHidden(true); // 隐藏默认序号
+    // ui->tableRecord->verticalHeader()->setHidden(true); // 隐藏默认序号
     ui->tableRecord->resizeColumnsToContents(); // 自适应列宽
 }
 
@@ -767,6 +774,18 @@ void MainWindow::on_pushButtonCalc_clicked()
         data = model->data(index);
         double valDest= data.toDouble();
 
+        index = model->index(i, 0);
+        data = model->data(index);
+        double valAA= data.toDouble();
+        index = model->index(i, 1);
+        data = model->data(index);
+        double valDA = data.toDouble();
+        index = model->index(i, 2);
+        data = model->data(index);
+        double valDD = data.toDouble();
+
+        fretThaSolver->expandGrayData(valAA, valDA, valDD);
+
         fretThaSolver->expandFretData(valEd, valEa, valRad, valRda, valAest, valDest);
     }
 
@@ -858,7 +877,13 @@ void MainWindow::on_pushButtonImportScreen_clicked()
 
 void MainWindow::on_pushButtonAutoGen_clicked()
 {
-    fretThaSolver->generateRoiFromBatch(m_globalPath);
+    fretThaSolver->setBatchPath(m_globalPath);
+    // showProgressDialog("请等待数据处理...");
+    connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
+    fretThaSolver->start();
+    ui->progressBar->setValue(0);
+    // m_dialog->exec();
+    ui->pushButtonAutoGen->setEnabled(false);
 }
 
 void MainWindow::on_pushButtonDelete_clicked()
@@ -1143,6 +1168,8 @@ void MainWindow::initSignalsAndSlots()
     });
 
     connect(fretThaSolver, SIGNAL(sendData(const QMap<TableHeader, QString> &)), this, SLOT(receiveData(const QMap<TableHeader, QString> &)));
+
+    connect(fretThaSolver, &FretThaSolver::progressChanged, ui->progressBar, &QProgressBar::setValue);
 
     // 设置快捷键
     setupShortcuts();
