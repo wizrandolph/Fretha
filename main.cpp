@@ -1,5 +1,6 @@
 
 #include "mainwindow.h"
+#include "enumerator.h"
 #include <QApplication>
 
 #include <QLocale>
@@ -78,7 +79,8 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
 int main(int argc, char *argv[])
 {
 
-    qInstallMessageHandler(myMessageOutput);
+    if (RUNMODE == RUNMODE_RELEASE)
+        qInstallMessageHandler(myMessageOutput);
 
     QApplication a(argc, argv);
 

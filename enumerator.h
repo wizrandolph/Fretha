@@ -4,6 +4,14 @@
 
 #include <QString>
 
+enum RunMode {
+    RUNMODE_DEBUG = -1,
+    RUNMODE_RELEASE = 0,
+    RUNMODE_EXPERIMENT = 1
+};
+
+#define RUNMODE 0
+
 enum ThaResult
 {
     KDEFF, ND_NA, EAMAX, EDMAX

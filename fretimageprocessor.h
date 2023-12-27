@@ -10,6 +10,67 @@
 #include <QString>
 #include <QDebug>
 
+namespace wiz {
+    cv::Mat getMorphologyClose(const cv::Mat& src, int kernelSize);
+    cv::Mat getMorphologyOpen(const cv::Mat& src, int kernelSize);
+
+    cv::Mat dilateImage(const cv::Mat& image, int elementSize);
+    cv::Mat erodeImage(const cv::Mat& image, int elementSize);
+
+    cv::Mat getPseudoColorImage(const cv::Mat& inputImage8UC1);
+    cv::Mat getGreenFireBlue(const cv::Mat& inputImage8UC1);
+    cv::Mat getFirePseudocolor(const cv::Mat& input_image);
+
+    cv::Mat normalizeByMinMax(const cv::Mat& image);
+    cv::Mat normalizeByZeroMax(const cv::Mat& image);
+    cv::Mat normalize(const cv::Mat& image, double min, double max);
+
+    cv::Mat normalizeByMinMax8U(const cv::Mat& image);
+    cv::Mat normalizeByZeroMax8U(const cv::Mat& image);
+    cv::Mat normalize8U(const cv::Mat& image, double min, double max);
+
+    cv::Mat normalizeByMinMax16U(const cv::Mat& image);
+    cv::Mat normalizeByZeroMax16U(const cv::Mat& image);
+    cv::Mat normalize16U(const cv::Mat& image, double min, double max);
+
+    cv::Mat applyMaskToImage(const cv::Mat& inputImage, const cv::Mat& inputMask);
+
+    void setNegativeToZero(cv::Mat& inputImage);
+    // 三通道图像合并
+    cv::Mat mergeChannels(cv::Mat blueChannel, cv::Mat greenChannel, cv::Mat redChannel);
+    // 中值滤波
+    cv::Mat medianFilter(const cv::Mat& src, int kernelSize);
+    cv::Mat medianFilter16U(const cv::Mat& src, int kernelSize);
+    // 高斯滤波
+    cv::Mat gaussianFilter(const cv::Mat& src, int kernelSize, double sigma);
+    cv::Mat gaussianFilter16U(const cv::Mat& src, int kernelSize, double sigma);
+    // 均值滤波
+    cv::Mat meanFilter(const cv::Mat& src, int kernelSize);
+    cv::Mat meanFilter16U(const cv::Mat& src, int kernelSize);
+    cv::Mat localStandardDeviation(const cv::Mat& src, int kernelSize);
+    cv::Mat localStandardDeviationByChat(const cv::Mat& src, int kernelSize);
+    // Otsu算法
+    double calcOtsuThreshold(const cv::Mat& src);
+    // 极小值点
+    cv::Mat findLocalMinima(const cv::Mat& src);
+    cv::Mat findLocalMinimaLaplacian(const cv::Mat& src);
+    // 边缘检测
+    cv::Mat detectEdgesBySobel(const cv::Mat& src, int kernelSize);
+    // 获取二值化图像中的最大连通域
+    cv::Mat getLargestConnectedComponent(const cv::Mat& binaryImage);
+    cv::Mat enhanceImage(const cv::Mat& img, int windowSize);
+
+    // 学习图像算法
+    cv::Mat watershedSegmentation(const cv::Mat& src);   // 分水岭算法
+    cv::Mat visualizeWatershed(const cv::Mat& markers);  //可视化
+
+    // 直方图计算背景值
+    double calcBackgroundGray(cv::Mat mat);
+    double calculateAverageGrayValue(const cv::Mat& grayImage, const cv::Mat& mask, cv::Point center, double distanceLimit);
+
+    cv::Mat removeScatter(const cv::Mat& image, int windowSize, double ratio = -1);    // 移除散点
+}
+
 class FretImageProcessor
 {
 public:
@@ -52,52 +113,7 @@ public:
 
     static QStringList findImageFiles(const QString& folderPath, const QString& searchStr);
 
-    static cv::Mat getPseudoColorImage(const cv::Mat& inputImage8UC1);
-    static cv::Mat getGreenFireBlue(const cv::Mat& inputImage8UC1);
-    static cv::Mat getFirePseudocolor(const cv::Mat& input_image);
 
-    static cv::Mat normalizeByMinMax(const cv::Mat& image);
-    static cv::Mat normalizeByZeroMax(const cv::Mat& image);
-    static cv::Mat normalize(const cv::Mat& image, double min, double max);
-
-    static cv::Mat normalizeByMinMax8U(const cv::Mat& image);
-    static cv::Mat normalizeByZeroMax8U(const cv::Mat& image);
-    static cv::Mat normalize8U(const cv::Mat& image, double min, double max);
-
-    static cv::Mat normalizeByMinMax16U(const cv::Mat& image);
-    static cv::Mat normalizeByZeroMax16U(const cv::Mat& image);
-    static cv::Mat normalize16U(const cv::Mat& image, double min, double max);
-
-    static cv::Mat applyMaskToImage(const cv::Mat& inputImage, const cv::Mat& inputMask);
-
-    static void setNegativeToZero(cv::Mat& inputImage);
-    // 三通道图像合并
-    static cv::Mat mergeChannels(cv::Mat blueChannel, cv::Mat greenChannel, cv::Mat redChannel);
-    // 中值滤波
-    static cv::Mat medianFilter(const cv::Mat& src, int kernelSize);
-    static cv::Mat medianFilter16U(const cv::Mat& src, int kernelSize);
-    // 高斯滤波
-    static cv::Mat gaussianFilter(const cv::Mat& src, int kernelSize, double sigma);
-    static cv::Mat gaussianFilter16U(const cv::Mat& src, int kernelSize, double sigma);
-    // 均值滤波
-    static cv::Mat meanFilter(const cv::Mat& src, int kernelSize);
-    static cv::Mat meanFilter16U(const cv::Mat& src, int kernelSize);
-    static cv::Mat localStandardDeviation(const cv::Mat& src, int kernelSize);
-    static cv::Mat localStandardDeviationByChat(const cv::Mat& src, int kernelSize);
-    // Otsu算法
-    static double calcOtsuThreshold(const cv::Mat& src);
-    // 极小值点
-    static cv::Mat findLocalMinima(const cv::Mat& src);
-    static cv::Mat findLocalMinimaLaplacian(const cv::Mat& src);
-    // 边缘检测
-    static cv::Mat detectEdgesBySobel(const cv::Mat& src, int kernelSize);
-    // 获取二值化图像中的最大连通域
-    static cv::Mat getLargestConnectedComponent(const cv::Mat& binaryImage);
-    static cv::Mat enhanceImage(const cv::Mat& img, int windowSize);
-    // 直方图计算背景值
-    static double calcBackgroundGray(cv::Mat mat);
-
-    static double calculateAverageGrayValue(const cv::Mat& grayImage, const cv::Mat& mask, cv::Point center, double distanceLimit);
 
 private:
     QString viewPath;

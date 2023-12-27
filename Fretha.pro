@@ -136,10 +136,12 @@ CONFIG += lrelease
 CONFIG += embed_translations
 
 INCLUDEPATH += \
-    C:\Dev\Libs\opencv-4.5.1built\install\include
+    C:\Dev\Libs\opencv-4.5.1built\install\include \
+    dlib\include
 
 LIBS += \
-    C:\Dev\Libs\opencv-4.5.1built\lib\libopencv_*.a
+    C:\Dev\Libs\opencv-4.5.1built\lib\libopencv_*.a \
+    C:\Users\22155\Documents\GitHub\Fretha\dlib\lib\libdlib.a
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

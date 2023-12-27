@@ -25,7 +25,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) , ui(new Ui::MainW
 
     // 【用于测试】
     // 用来测试, 省去输入路径的步骤
-    // ui->lineEditPath->setText("D:\\Files\\FRET\\Data\\MyData\\THA\\Template\\lite");
+    if (RUNMODE == RUNMODE_EXPERIMENT || RUNMODE == RUNMODE_DEBUG)
+        ui->lineEditPath->setText("D:\\Files\\FRET\\Data\\MyData\\THA\\Template\\test_data");
 }
 
 static bool checkChannelImages(const QString& folderPath)
@@ -230,6 +231,10 @@ void MainWindow::on_pushButtonBinExec_clicked()
     double min = ui->doubleSpinBoxMin->value(), max = ui->doubleSpinBoxMax->value(), itv = ui->doubleSpinBoxItv->value();
     fretThaSolver->performTwoHybridMatlabBin(min, max, itv);
     updateThaBinCharts();
+}
+
+void MainWindow::on_pushButtonUpdateEdRc_clicked() {
+    updateEdRcResults();
 }
 
 void MainWindow::on_pushButtonHome_clicked()
@@ -791,18 +796,20 @@ void MainWindow::on_pushButtonCalc_clicked()
 
     m_savePath = m_globalPath + "/THA_Result";
 
-    fretThaSolver->performTwoHybridMatlab();
-    fretThaSolver->performTwoHybridMatlabBin(0, 5, 0.1);
-    fretThaSolver->performTwoHybridLinear();
-
     ui->pushButtonBin->setChecked(false);
     ui->pushButtonEdRc->setChecked(false);
     ui->pushButtonTHA->setChecked(true);
 
+    fretThaSolver->performTwoHybridMatlab();
+    fretThaSolver->performTwoHybridMatlabBin(0, 5, 0.1);
+    // fretThaSolver->performTwoHybridLinear();
+
     updateThaCharts();
     updateThaBinCharts();
-    updateEdRcCharts();
-    updateResultInterface();
+    // updateEdRcCharts();
+    updateResultValue();
+
+    updateEdRcResults();
 
     ui->stackedWidget->setCurrentIndex(1);
     ui->stackedWidgetResult->setCurrentIndex(0);
@@ -1188,7 +1195,7 @@ void MainWindow::initAllCharts()
 /**
  * @brief MainWindow::updateResultInterface 更新结果到界面
  */
-void MainWindow::updateResultInterface()
+void MainWindow::updateResultValue()
 {
     // 更新THA的结果
     ui->lineEditEamaxP2->setText(QString::number(fretThaSolver->resultsTha[EAMAX]));
@@ -1559,5 +1566,16 @@ void MainWindow::setupShortcuts()
     });
 }
 
+void MainWindow::updateEdRcResults() {
 
+    double
+        minSlope = ui->doubleSpinBoxMinSlope->value(),
+        maxSlope = ui->doubleSpinBoxMaxSlope->value(),
+        minAppro = ui->doubleSpinBoxMinAppro->value(),
+        maxAppro = ui->doubleSpinBoxMaxAppro->value();
+
+    fretThaSolver->performTwoHybridLinear(minSlope, maxSlope, minAppro, maxAppro);
+    updateEdRcCharts();
+    updateResultValue();
+}
 

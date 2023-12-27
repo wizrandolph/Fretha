@@ -75,7 +75,7 @@ private:
     void changeView(QModelIndex &index);
     void trackRect(QModelIndex &index);
 
-    void updateResultInterface();
+    void updateResultValue();
     void updateThaCharts();
     void updateThaBinCharts();
     void updateEdRcCharts();
@@ -90,6 +90,8 @@ private:
 
     void setupShortcuts();
 
+    void updateEdRcResults();
+
 
 private slots:
     void on_pushButtonBrowse_clicked();
@@ -103,6 +105,7 @@ private slots:
     void on_pushButtonTHA_clicked();
     void on_pushButtonBin_clicked();
     void on_pushButtonBinExec_clicked();
+    void on_pushButtonUpdateEdRc_clicked();
 
     void on_pushButtonHome_clicked();
 

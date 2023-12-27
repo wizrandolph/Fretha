@@ -4,41 +4,82 @@
 #include "TwoHybridSolver/TwoHybridSolver_terminate.h"
 #include "TwoHybridSolver/coder_array.h"
 
-cv::Mat removeScatter(const cv::Mat& image, int windowSize) {
-    int height = image.rows;
-    int width = image.cols;
-    int halfWindow = windowSize / 2;
+#include <dlib/optimization.h>
+#include <vector>
+#include <cmath>
+#include <QFile>
+#include <QTextStream>
+#include <QStringList>
 
-    cv::Mat dilatedImage(image.size(), CV_8UC1, cv::Scalar(0));
+// 基于dlib的数据拟合算法
+typedef dlib::matrix<double,0,1> column_vector;
 
-    for (int i = halfWindow; i < height - halfWindow; i++) {
-        for (int j = halfWindow; j < width - halfWindow; j++) {
-            cv::Mat window = image(cv::Range(i - halfWindow, i + halfWindow + 1),
-                                   cv::Range(j - halfWindow, j + halfWindow + 1));
-            int whitePixels = cv::countNonZero(window == 255);
-            if (whitePixels > (windowSize * windowSize) / 2) {
-                dilatedImage.at<uchar>(i, j) = 255;
-            }
-        }
+struct MyData {
+    std::vector<double> AEST;
+    std::vector<double> DEST;
+    std::vector<double> EACORR;
+    std::vector<double> EDCORR;
+};
+
+double LeastSquareLoss(const std::vector<double>& AEST, const std::vector<double>& DEST, const std::vector<double>& EACORR, const std::vector<double>& EDCORR, const column_vector& X) {
+    std::vector<double> Dfree(AEST.size());
+    std::vector<double> Afree(AEST.size());
+    std::vector<double> EAPRED(AEST.size());
+    std::vector<double> EDPRED(AEST.size());
+
+    for (uint i = 0; i < AEST.size(); ++i) {
+        Dfree[i] = ((DEST[i]-X(0)-AEST[i]*X(1))+std::sqrt(std::pow(DEST[i]-X(0)-AEST[i]*X(1), 2)+4*X(0)*DEST[i]))/2;
+        Afree[i] = AEST[i]-(DEST[i]-Dfree[i])/X(1);
+        EAPRED[i] = X(2)*Dfree[i]/(Dfree[i]+X(0));
+        EDPRED[i] = X(3)*Afree[i]/(Afree[i]+X(0)/X(1));
     }
 
-    return dilatedImage;
+    double SUMEAERROR = 0.0;
+    double SUMEDERROR = 0.0;
+
+    for (uint i = 0; i < AEST.size(); ++i) {
+        SUMEAERROR += std::pow(EACORR[i]-EAPRED[i], 2);
+        SUMEDERROR += std::pow(EDCORR[i]-EDPRED[i], 2);
+    }
+
+    return SUMEAERROR + SUMEDERROR;
 }
 
+double Objective(const column_vector& x, void *my_func_data) {
+    auto data = static_cast<MyData*>(my_func_data);
+    return LeastSquareLoss(data->AEST, data->DEST, data->EACORR, data->EDCORR, x);
+}
+
+column_vector TwoHybridSolver(const std::vector<double>& AAEST, const std::vector<double>& DDEST, const std::vector<double>& EACORRR, const std::vector<double>& EDCORRR) {
+    column_vector starting_point(4);
+    starting_point = 0.5, 0.5, 0.5, 0.5;
+
+    MyData data = {AAEST, DDEST, EACORRR, EDCORRR};
+
+    try {
+        auto objective_wrapper = [&data](const column_vector& x) {
+            return Objective(x, &data);
+        };
+
+        dlib::find_min_using_approximate_derivatives(dlib::bfgs_search_strategy(),
+                                                     dlib::objective_delta_stop_strategy(1e-7),
+                                                     objective_wrapper,
+                                                     starting_point,
+                                                     -1,
+                                                     0.01);
+    }
+    catch (std::exception& e) {
+        std::cout << e.what() << std::endl;
+    }
+
+    return starting_point;
+}
+
+// 其他算法
+
+
+
 /*******************质心算法********************/
-
-// 定义保存坐标的结构体
-struct Point2D {
-    int x;
-    int y;
-};
-
-// 连通域对象
-struct ConnectedComponent {
-    std::vector<Point2D> pixels;
-    Point2D centroid;
-};
-
 double calculateDistance(const Point2D& p1, const Point2D& p2) {
     int dx = p2.x - p1.x;
     int dy = p2.y - p1.y;
@@ -370,8 +411,8 @@ void FretThaSolver::processImageToGrayData()
     Mat matFiltered[3];
     double grayBackground[3];
     for (int i = 0; i < 3; ++ i) {
-        matFiltered[i] = FretImageProcessor::meanFilter16U(matSrc[i], 5);
-        grayBackground[i] = FretImageProcessor::calcBackgroundGray(matFiltered[i]);
+        matFiltered[i] = wiz::meanFilter16U(matSrc[i], 5);
+        grayBackground[i] = wiz::calcBackgroundGray(matFiltered[i]);
     }
 
     // 根据SBR阈值进行滤波
@@ -384,40 +425,40 @@ void FretThaSolver::processImageToGrayData()
     }
     bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
     bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
-    maskSbr = FretImageProcessor::normalizeByMinMax(maskSbr8U);
-    //cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
+    maskSbr = wiz::normalizeByMinMax(maskSbr8U);
+    //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
 
     // 按照我们设计的算法生成评价结果
     Mat maskStd;
     Mat scoreStd(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
     for (int i = 0; i < 3; ++ i) {
 
-        Mat matStd = FretImageProcessor::localStandardDeviation(matFiltered[i], 5);
-        Mat matStd8U = FretImageProcessor::normalizeByMinMax8U(matStd);
-        //cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
+        Mat matStd = wiz::localStandardDeviation(matFiltered[i], 5);
+        Mat matStd8U = wiz::normalizeByMinMax8U(matStd);
+        //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
 
-        Mat matStdMinima = FretImageProcessor::findLocalMinima(matStd8U);
-        Mat matStdMinima8U = FretImageProcessor::normalizeByMinMax8U(matStdMinima);
-        //cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
+        Mat matStdMinima = wiz::findLocalMinima(matStd8U);
+        Mat matStdMinima8U = wiz::normalizeByMinMax8U(matStdMinima);
+        //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
 
-        Mat matStdMinimaLap = FretImageProcessor::findLocalMinimaLaplacian(matStd8U);
-        Mat matStdMinimaLap8U = FretImageProcessor::normalizeByMinMax8U(matStdMinimaLap);
-        //cv::imwrite((viewFolderPath + "/StdLocalMinimaLaplacian" + QString::number(i) + ".tif").toStdString(), matStdMinimaLap8U);
+        Mat matStdMinimaLap = wiz::findLocalMinimaLaplacian(matStd8U);
+        Mat matStdMinimaLap8U = wiz::normalizeByMinMax8U(matStdMinimaLap);
+        //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/StdLocalMinimaLaplacian" + QString::number(i) + ".tif").toStdString(), matStdMinimaLap8U);
 
-        scoreStd = scoreStd + FretImageProcessor::normalizeByMinMax(matStdMinima);
+        scoreStd = scoreStd + wiz::normalizeByMinMax(matStdMinima);
     }
 
-    Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
-    //cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
+    Mat scoreStd16U = wiz::normalizeByMinMax16U(scoreStd);
+    //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
     cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     maskStd.convertTo(maskStd, CV_8U);
-    //cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
+    //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
 
     // 合成最后的结果
     Mat maskUlt, scoreMat;
     scoreMat = maskSbr.mul(scoreStd);
     bitwise_and(maskSbr8U, maskStd, maskUlt);
-    //cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
+    //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
 
     // 计算质心
     std::vector<Point2D> centroids = getConnectedComponentCentroids(maskUlt);
@@ -476,51 +517,27 @@ void FretThaSolver::processOneBatch(QString batchFolderPath)
 // 执行拟合计算
 void FretThaSolver::performTwoHybridMatlab()  // matlab求解规划()
 {
-    // 进行规划求解
-    coder::array<double, 2U> arrayAest, arrayDest, arrayEacorr, arrayEdcorr;
-    uint n = vecFretData[Ed].size();
-
-    // 检查大小匹配
-    if (n == vecFretData[Dest].size() &&
-        n == vecFretData[Ea].size() &&
-        n == vecFretData[Aest].size()) {
-        arrayAest.set_size(1, n);
-        arrayDest.set_size(1, n);
-        arrayEacorr.set_size(1, n);
-        arrayEdcorr.set_size(1, n);
-    }
-    else {
-        qDebug() << "[Fret Two Hybrid Nonlinear Solution]:\t Data Size Not Matched";
-        return;
-    }
-    // 读取数据
-    for (uint i = 0; i < n; ++ i) {
-        arrayAest[i] = vecFretData[Aest][i];
-        arrayDest[i] = vecFretData[Dest][i];
-        arrayEacorr[i] = vecFretData[Ea][i];
-        arrayEdcorr[i] = vecFretData[Ed][i];
-    }
-    // 进行计算
-    double loss;
-    TwoHybridSolver(arrayAest, arrayDest, arrayEacorr, arrayEdcorr, resultsTha, &loss);
-    TwoHybridSolver_terminate();
+    column_vector result = TwoHybridSolver(vecFretData[Aest], vecFretData[Dest], vecFretData[Ea], vecFretData[Ed]);
+    resultsTha[KDEFF] = result(0);
+    resultsTha[ND_NA] = result(1);
+    resultsTha[EAMAX] = result(2);
+    resultsTha[EDMAX] = result(3);
 
     // 按照求得的结果生成Afree和Dfree
-    for (uint i = 0; i < n; ++ i) {
-        double vadoublefree = ( ((vecFretData[Dest][i] - resultsTha[KDEFF] - vecFretData[Aest][i] * resultsTha[ND_NA]))
+    for (uint i = 0; i < vecFretData[Aest].size(); ++ i) {
+        double valDfree = ( ((vecFretData[Dest][i] - resultsTha[KDEFF] - vecFretData[Aest][i] * resultsTha[ND_NA]))
                                + sqrt(pow((vecFretData[Dest][i] - resultsTha[KDEFF] - vecFretData[Aest][i] * resultsTha[ND_NA]), 2) +
                                       4 * resultsTha[KDEFF] * vecFretData[Dest][i])
                                ) / 2;
-        double valAfree = vecFretData[Aest][i] - (vecFretData[Dest][i] - vadoublefree) / resultsTha[ND_NA];
+        double valAfree = vecFretData[Aest][i] - (vecFretData[Dest][i] - valDfree) / resultsTha[ND_NA];
         vecFretData[Afree].push_back(valAfree);
-        vecFretData[Dfree].push_back(vadoublefree);
+        vecFretData[Dfree].push_back(valDfree);
     }
     qDebug() << "[Fret Two Hybrid Matlab Solution]:";
     qDebug() << "Ed,max:" << resultsTha[EDMAX]
              << "\tEa,max:" << resultsTha[EAMAX]
              << "\tKd,EFF:" << resultsTha[KDEFF]
-             << "\tNd/Na:" << resultsTha[ND_NA]
-             << "\tloss:" << loss;
+             << "\tNd/Na:" << resultsTha[ND_NA];
 }
 
 void FretThaSolver::performTwoHybridMatlabBin(double min, double max, double interval)  // matlab求解规划()
@@ -553,6 +570,7 @@ void FretThaSolver::performTwoHybridMatlabBin(double min, double max, double int
         arrayEacorr[i] = vecFretDataBin[Ea][i];
         arrayEdcorr[i] = vecFretDataBin[Ed][i];
     }
+
     // 进行计算
     double loss;
     TwoHybridSolver(arrayAest, arrayDest, arrayEacorr, arrayEdcorr, resultsThaBin, &loss);
@@ -576,15 +594,15 @@ void FretThaSolver::performTwoHybridMatlabBin(double min, double max, double int
              << "\tloss:" << loss;
 }
 
-void FretThaSolver::performTwoHybridLinear()
+void FretThaSolver::performTwoHybridLinear(double minSlope , double maxSlope, double minAppro, double maxAppro)
 {
     // 经验值范围应是0-0.5，3-5
-    resultsEdRad[EAMAX] = calcSlope(0, 0.5, vecFretData[Rad], vecFretData[Ed]);
-    resultsEdRad[EDMAX] = calcApproach(2.0, 100, vecFretData[Rad], vecFretData[Ed]);
+    resultsEdRad[EAMAX] = calcSlope(minSlope, maxSlope, vecFretData[Rad], vecFretData[Ed]);
+    resultsEdRad[EDMAX] = calcApproach(minAppro, maxAppro, vecFretData[Rad], vecFretData[Ed]);
     resultsEdRad[ND_NA] = resultsEdRad[EAMAX] / resultsEdRad[EDMAX];
 
-    resultsEaRda[EDMAX] = calcSlope(0, 0.5, vecFretData[Rda], vecFretData[Ea]);
-    resultsEaRda[EAMAX] = calcApproach(2, 100, vecFretData[Rda], vecFretData[Ea]);
+    resultsEaRda[EDMAX] = calcSlope(minSlope, maxSlope, vecFretData[Rda], vecFretData[Ea]);
+    resultsEaRda[EAMAX] = calcApproach(minAppro, maxAppro, vecFretData[Rda], vecFretData[Ea]);
     resultsEaRda[ND_NA] = resultsEaRda[EAMAX] / resultsEaRda[EDMAX];
 
 
@@ -653,176 +671,341 @@ void FretThaSolver::generateRoiFromView(QString viewFolderPath, QString viewName
         qDebug() << "[Expand Gray Data]:\tFailed";
     }
 }
-
-void FretThaSolver::generateRoiFromImage(QString viewName)
+void FretThaSolver::Segmentation()
 {
     using namespace cv;
+    Mat  matSrc[3], matMean[3], matBlur[3];
+    for (int i = 0; i < 3; ++ i) {
+        matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
+        Mat markers = wiz::watershedSegmentation(matSrc[i]);
+        Mat colored = wiz::visualizeWatershed(markers);
+        cv::imwrite(
+            (viewFolderPath + "/Watershed" + QString::number(i)+ ".tif").toStdString(),
+            colored
+        );
+    }
+}
 
-    // 赋值图片数据
+void FretThaSolver::scorePixel() {
+    QElapsedTimer timer;
+    using namespace cv;
+
     Mat matSrc[3];
     for (int i = 0; i < 3; ++ i) {
         matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
     }
 
-//    给王婧臻
-//    QDir dir("D:/test");
-//    if (dir.exists()) {
-//        QString path;
-//        path = "D:/test/Ed" + viewName + ".tif";
-//        imageProcessor->preProcessData();
-//        imageProcessor->calcEFret();
-//        cv::imwrite(path.toStdString(), imageProcessor->getPseuImage(Ed));
-//        path = "D:/test/Rc" + viewName + ".tif";
-//        cv::imwrite(path.toStdString(), imageProcessor->getPseuImage(Rad));
-//        path = "D:/test/Merge" + viewName + ".tif";
-//        cv::imwrite(path.toStdString(), imageProcessor->getMergedImage());
-//        path = "D:/test/AA" + viewName + ".tif";
-//        cv::imwrite(path.toStdString(), imageProcessor->getNormalizedImage(AA));
-//        path = "D:/test/DA" + viewName + ".tif";
-//        cv::imwrite(path.toStdString(), imageProcessor->getNormalizedImage(DA));
-//        path = "D:/test/DD" + viewName + ".tif";
-//        cv::imwrite(path.toStdString(), imageProcessor->getNormalizedImage(DD));
-//    }
-
-
-
-    // 对数据进行均值滤波，并且计算得到背景灰度值
-    Mat matFiltered[3];
-    Mat matData[3];
-    double grayBackground[3];
+    Mat matMean[3], matBlur[3];
     for (int i = 0; i < 3; ++ i) {
-        matFiltered[i] = FretImageProcessor::gaussianFilter16U(matSrc[i], 5, 1);
-        matData[i] = FretImageProcessor::meanFilter16U(matFiltered[i], 5);
-        grayBackground[i] = FretImageProcessor::calcBackgroundGray(matFiltered[i]);
+        matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
+        matBlur[i] = wiz::gaussianFilter16U(matSrc[i], 3, 1);
+        matMean[i] = wiz::meanFilter16U(matBlur[i], 3);
+
     }
 
-    // 根据SBR阈值进行滤波
-    double threshRatio[3] = {3.0, 3.0, 1.0};
-    Mat maskSingleChannel[3];
-    Mat maskSbr, maskSbr8U;    // 0-1
+    // 生成灰度值分数
+    Mat scoreBright[3];
     for (int i = 0; i < 3; ++ i) {
-        threshold(matFiltered[i], maskSingleChannel[i], grayBackground[i] * threshRatio[i], 255, THRESH_BINARY);
-        maskSingleChannel[i].convertTo(maskSingleChannel[i], CV_8U);
+        scoreBright[i] = wiz::normalizeByMinMax(matMean[i]);
     }
-    bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
-    bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
-    maskSbr = FretImageProcessor::normalizeByMinMax(maskSbr8U);
-    //cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
 
-    // 按照我们设计的算法生成评价结果
-    Mat maskStd;
-    Mat scoreStd(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
-    Mat maskBg(matSrc[AA].size(), CV_8UC1, cv::Scalar(0));
-
+    // 生成标准差分数
+    Mat scoreStdDev[3];
+    Mat maskOr(matSrc[0].size(), CV_8UC1, Scalar(0));
+    Mat maskAnd(matSrc[0].size(), CV_8UC1, Scalar(255));
     for (int i = 0; i < 3; ++ i) {
-
-        Mat matStd = FretImageProcessor::localStandardDeviation(matFiltered[i], 5);
-        Mat matStd8U = FretImageProcessor::normalizeByMinMax8U(matStd);
-        //cv::imwrite((viewFolderPath + "/LocalStandardDeviation" + QString::number(i) + ".tif").toStdString(), matStd8U);
+        Mat localStd = wiz::localStandardDeviation(matBlur[i], 3);
+        cv::imwrite(
+            (viewFolderPath + "/LocalStdDev" + QString::number(i)+ ".tif").toStdString(),
+            wiz::normalizeByMinMax16U(localStd)
+            );
+        Mat matStd = wiz::normalizeByMinMax(localStd);
+        Mat matStd16U = wiz::normalizeByMinMax16U(matStd);
         Mat mask;
-        threshold(FretImageProcessor::normalizeByMinMax8U(matStd), mask, 4, 255, cv::THRESH_BINARY);
+
+        double valBg = wiz::calcBackgroundGray(matStd16U);
+        // qDebug() << valBg;
+
+        threshold(matStd16U, mask, valBg, 255, cv::THRESH_BINARY);
+        mask.convertTo(mask, CV_8UC1);
+
+        cv::imwrite(
+            (viewFolderPath + "/maskBackgroundArea" + QString::number(i)+ ".tif").toStdString(),
+            matStd16U
+            );
+
+        mask = wiz::removeScatter(mask, 10);
+        // mask = wiz::erodeImage(mask, 5);
+        cv::imwrite(
+            (viewFolderPath + "/maskBackgroundAreaProcessed" + QString::number(i)+ ".tif").toStdString(),
+            mask
+            );
+
+        bitwise_or(maskOr, mask, maskOr);
+        bitwise_and(maskAnd, mask, maskAnd);
+
+        scoreStdDev[i] = 1.0 - matStd;
+    }
+
+    cv::imwrite(
+        (viewFolderPath + "/maskOr" + ".tif").toStdString(),
+        maskOr
+        );
+
+    cv::imwrite(
+        (viewFolderPath + "/maskAnd" + ".tif").toStdString(),
+        maskAnd
+        );
+
+    // 计算每个矩阵的平方
+    Mat product;
+    Mat sum(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
+    for (int i = 0; i < 3; ++ i) {
+        multiply(scoreBright[i], scoreBright[i], product);
+        add(sum, product, sum);
+    }
+
+    for (int i = 0; i < 3; ++ i) {
+        multiply(scoreStdDev[i], scoreStdDev[i], product);
+        add(sum, product / 9, sum);
+    }
+
+    // 对每个元素开根号
+    Mat result, result8U;
+    sqrt(sum, result);
+    result8U = wiz::normalizeByMinMax8U(result);
+
+    qDebug() << "[Func Time Cost]:\t\t" << timer.elapsed();
+
+    cv::imwrite((viewFolderPath + "/FinalScore" + ".tif").toStdString(), result8U);
+}
+void FretThaSolver::generateRoiNew() {
+    using namespace cv;
+
+    QElapsedTimer timer;
+    timer.start();
+
+    // 取数据，并得到中间数据
+    Mat matSrc[3];
+    for (int i = 0; i < 3; ++ i) {
+        matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
+    }
+    Mat matMean[3], matBlur[3];
+    Mat maskAdaptive(matSrc[0].size(), CV_8UC1, Scalar(255));
+
+    for (int i = 0; i < 3; ++ i) {
+        matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
+        matBlur[i] = wiz::gaussianFilter16U(matSrc[i], 3, 1);
+        matMean[i] = wiz::meanFilter16U(matBlur[i], 3);
+
+        Mat mat8U, dst;
+        mat8U = wiz::normalizeByZeroMax8U(matBlur[i]);
+        cv::adaptiveThreshold(mat8U, dst, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 51, 2);
+        cv::imwrite(
+            (viewFolderPath + "/maskAdaptive" + QString::number(i) + ".tif").toStdString(),
+            dst
+        );
+
+        dst.convertTo(dst, CV_8UC1);
+
+        bitwise_and(maskAdaptive, dst, maskAdaptive);
+
+    }
+    cv::imwrite(
+        (viewFolderPath + "/maskAdaptiveMerge" + ".tif").toStdString(),
+        maskAdaptive
+    );
+
+    for (int i = 0; i < 10; ++ i) {
+//        maskAdaptive = wiz::removeScatter(maskAdaptive, 5);
+
+        maskAdaptive = wiz::getMorphologyClose(maskAdaptive, 5);
+        maskAdaptive = wiz::erodeImage(maskAdaptive, 5);
+        maskAdaptive = wiz::getMorphologyOpen(maskAdaptive, 5);
+
+        Mat maskBg = wiz::getLargestConnectedComponent(maskAdaptive);
+
+        cv::imwrite(
+            (viewFolderPath + "/maskAdaptiveMerge" + QString::number(i) + ".tif").toStdString(),
+            maskBg
+        );
+    }
+
+    qDebug() << "[Function Time Cost]:\t\t" << timer.elapsed();
+}
+
+void FretThaSolver::generateRoiFromImage(QString viewName)
+{
+    if (RUNMODE == RUNMODE_EXPERIMENT) {
+        generateRoiNew();
+
+        // Segmentation();
+    } else if (RUNMODE == RUNMODE_RELEASE) {
+        using namespace cv;
+
+        // 赋值图片数据
+        Mat matSrc[3];
+        for (int i = 0; i < 3; ++ i) {
+            matSrc[i] = imageProcessor->getMatrixCopy(ChannelName(i));
+        }
+
+        // 对数据进行均值滤波，并且计算得到背景灰度值
+        Mat matFiltered[3];
+        Mat matData[3];
+        double grayBackground[3];
+        for (int i = 0; i < 3; ++ i) {
+            matFiltered[i] = wiz::gaussianFilter16U(matSrc[i], 5, 1);
+            matData[i] = wiz::meanFilter16U(matFiltered[i], 5);
+            grayBackground[i] = wiz::calcBackgroundGray(matFiltered[i]);
+        }
+
+        // 根据SBR阈值进行滤波
+        double threshRatio[3] = {3.0, 3.0, 3.0};
+        Mat maskSingleChannel[3];
+        Mat maskSbr, maskSbr8U;    // 0-1
+        for (int i = 0; i < 3; ++ i) {
+            threshold(matData[i], maskSingleChannel[i], grayBackground[i] * threshRatio[i], 255, THRESH_BINARY);
+            maskSingleChannel[i].convertTo(maskSingleChannel[i], CV_8U);
+        }
+        bitwise_and(maskSingleChannel[AA], maskSingleChannel[DA], maskSbr8U);
+        bitwise_and(maskSbr8U, maskSingleChannel[DD], maskSbr8U);
+        maskSbr = wiz::normalizeByMinMax(maskSbr8U);
+        //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/maskSBRatio.tif").toStdString(), maskSbr);
+
+        // 按照我们设计的算法生成评价结果
+        Mat maskStd;
+        Mat scoreStd(matSrc[AA].size(), CV_64FC1, Scalar(0.0));
+        Mat maskBg(matSrc[AA].size(), CV_8UC1, cv::Scalar(0));
+
+        for (int i = 0; i < 3; ++ i) {
+
+            Mat matStd = wiz::localStandardDeviation(matFiltered[i], 5);
+            Mat matStd8U = wiz::normalizeByMinMax8U(matStd);
+
+            Mat mask;
+            threshold(matStd8U, mask, 4, 255, cv::THRESH_BINARY);
+            Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));  // 创建一个 3x3 的矩形内核
+            cv::Mat dilatedImage;
+            mask = wiz::removeScatter(mask, 10, 0.5);
+            if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/mask" + QString::number(i) + ".tif").toStdString(), mask);
+            dilate(mask, dilatedImage, kernel);
+
+            bitwise_or(dilatedImage, maskBg, maskBg);   // 存到maskBg中
+
+            Mat matStdMinima = wiz::findLocalMinima(matStd8U);
+            // Mat matStdMinima8U = FretImageProcessor::normalizeByMinMax8U(matStdMinima);
+
+            scoreStd = scoreStd + wiz::normalizeByMinMax(matStdMinima);
+        }
 
         // 定义膨胀操作的内核
-        Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));  // 创建一个 3x3 的矩形内核
-        cv::Mat dilatedImage;
-        mask = removeScatter(mask, 10);
-        cv::imwrite((viewFolderPath + "/mask" + QString::number(i) + ".tif").toStdString(), mask);
-        dilate(mask, dilatedImage, kernel);
-
-        bitwise_or(dilatedImage, maskBg, maskBg);
-
-        Mat matStdMinima = FretImageProcessor::findLocalMinima(matStd8U);
-        Mat matStdMinima8U = FretImageProcessor::normalizeByMinMax8U(matStdMinima);
-        //cv::imwrite((viewFolderPath + "/StdLocalMinima" + QString::number(i) + ".tif").toStdString(), matStdMinima8U);
-
-        scoreStd = scoreStd + FretImageProcessor::normalizeByMinMax(matStdMinima);
-    }
-
-    // 定义膨胀操作的内核
-    int m = 1;
-    while (m --) {
-        maskBg = removeScatter(maskBg, 5);
-        Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));  // 创建一个 3x3 的矩形内核
-        dilate(maskBg, maskBg, kernel);
-    }
-    Mat maskCell = maskBg.clone();
-
-    cv::imwrite((viewFolderPath + "/BackgroundMask" + ".tif").toStdString(), maskBg);
-    maskBg = FretImageProcessor::getLargestConnectedComponent(255 - maskBg);
-    cv::imwrite((viewFolderPath + "/BackgroundAreaMask" + ".tif").toStdString(), maskBg);
-
-    Mat scoreStd16U = FretImageProcessor::normalizeByMinMax16U(scoreStd);
-    //cv::imwrite((viewFolderPath + "/StdMinimaFinal.tif").toStdString(), scoreStd16U);
-    cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    maskStd.convertTo(maskStd, CV_8U);
-    //cv::imwrite((viewFolderPath + "/StdMinimaMaskOtsu.tif").toStdString(), maskStd);
-
-    // 合成最后的结果
-    Mat maskUlt, scoreMat;
-    scoreMat = maskSbr.mul(scoreStd);
-    bitwise_and(maskSbr8U, maskStd, maskUlt);
-    //cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
-
-    // 图像增强
-    Mat matEnh[3];
-    for (int i = 0; i < 3; ++ i) {
-        matEnh[i] = FretImageProcessor::enhanceImage(matSrc[i], 64);
-        matEnh[i] = FretImageProcessor::gaussianFilter16U(matEnh[i], 5, 1);
-        imwrite((viewFolderPath + "/Enhanced" + QString::number(i) + ".tif").toStdString(),
-                matEnh[i]);
-        matEnh[i] = FretImageProcessor::applyMaskToImage(matEnh[i], maskCell);
-        imwrite((viewFolderPath + "/EnhancedMasked" + QString::number(i) + ".tif").toStdString(),
-                matEnh[i]);
-    }
-
-    // 计算质心
-    std::vector<Point2D> centroids = getConnectedComponentCentroids(maskUlt);
-
-    int kernel_size = 5;
-
-    for (const auto& centroid : centroids) {
-        int x = centroid.x;
-        int y = centroid.y;
-        double valBg[3];
-        for (int i = 0; i < 3; ++ i) {
-            valBg[i] = FretImageProcessor::calculateAverageGrayValue(matData[AA], maskBg, cv::Point2d(x, y), 512);
+        int m = 1;
+        while (m --) {
+            maskBg = wiz::removeScatter(maskBg, 5);
+            Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));  // 创建一个 3x3 的矩形内核
+            dilate(maskBg, maskBg, kernel);
         }
-        double valGrayAA = matData[AA].at<ushort>(y, x) - valBg[AA];
-        double valGrayDA = matData[DA].at<ushort>(y, x) - valBg[DA];
-        double valGrayDD = matData[DD].at<ushort>(y, x) - valBg[DD];
-        // 使用calculator进行计算
-        calculator->loadCorrectedGray(valGrayAA, valGrayDA, valGrayDD);
-        calculator->calcData();
-        if (!calculator->isDataCalculated()) continue;
-        // 获取数据
-        double valEa = calculator->getResult(Ea);
-        double valEd = calculator->getResult(Ed);
-        double valRad = calculator->getResult(Rad);
-        double valRda = calculator->getResult(Rda);
-        double valAest = calculator->getResult(Aest);
-        double valDest = calculator->getResult(Dest);
-        int rectx = x - kernel_size / 2;
-        int recty = y - kernel_size / 2;
-        int rectw = kernel_size;
-        int recth = kernel_size;
+        Mat maskCell = maskBg.clone();
 
-        QMap<TableHeader, QString> map;
-        map.insert(TABLE_HEADER_IAA, QString::number(valGrayAA));
-        map.insert(TABLE_HEADER_IDA, QString::number(valGrayDA));
-        map.insert(TABLE_HEADER_IDD, QString::number(valGrayDD));
-        map.insert(TABLE_HEADER_EA, QString::number(valEa));
-        map.insert(TABLE_HEADER_ED, QString::number(valEd));
-        map.insert(TABLE_HEADER_RAD, QString::number(valRad));
-        map.insert(TABLE_HEADER_RDA, QString::number(valRda));
-        map.insert(TABLE_HEADER_AEST, QString::number(valAest));
-        map.insert(TABLE_HEADER_DEST, QString::number(valDest));
-        map.insert(TABLE_HEADER_RECTX, QString::number(rectx));
-        map.insert(TABLE_HEADER_RECTY, QString::number(recty));
-        map.insert(TABLE_HEADER_RECTW, QString::number(rectw));
-        map.insert(TABLE_HEADER_RECTH, QString::number(recth));
-        map.insert(TABLE_HEADER_VIEW, viewName);
-        if (rectx >= 0 && recty >= 0) emit sendData(map);
+        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/BackgroundMask" + ".tif").toStdString(), maskBg);
+        maskBg = wiz::getLargestConnectedComponent(255 - maskBg);
+        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/BackgroundAreaMask" + ".tif").toStdString(), maskBg);
+
+        Mat scoreStd16U = wiz::normalizeByMinMax16U(scoreStd);
+        cv::threshold(scoreStd16U, maskStd, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+        maskStd.convertTo(maskStd, CV_8U);
+
+        // 合成最后的结果
+        Mat maskUlt, scoreMat;
+        scoreMat = maskSbr.mul(scoreStd);
+        bitwise_and(maskSbr8U, maskStd, maskUlt);
+        //if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite((viewFolderPath + "/FinalJudge.tif").toStdString(), maskUlt);
+
+        // 图像增强
+        if (RUNMODE == RUNMODE_EXPERIMENT) {
+
+            //    给王婧臻
+            //    QDir dir("D:/test");
+            //    if (dir.exists()) {
+            //        QString path;
+            //        path = "D:/test/Ed" + viewName + ".tif";
+            //        imageProcessor->preProcessData();
+            //        imageProcessor->calcEFret();
+            //        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite(path.toStdString(), imageProcessor->getPseuImage(Ed));
+            //        path = "D:/test/Rc" + viewName + ".tif";
+            //        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite(path.toStdString(), imageProcessor->getPseuImage(Rad));
+            //        path = "D:/test/Merge" + viewName + ".tif";
+            //        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite(path.toStdString(), imageProcessor->getMergedImage());
+            //        path = "D:/test/AA" + viewName + ".tif";
+            //        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite(path.toStdString(), imageProcessor->getNormalizedImage(AA));
+            //        path = "D:/test/DA" + viewName + ".tif";
+            //        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite(path.toStdString(), imageProcessor->getNormalizedImage(DA));
+            //        path = "D:/test/DD" + viewName + ".tif";
+            //        if (RUNMODE == RUNMODE_EXPERIMENT) cv::imwrite(path.toStdString(), imageProcessor->getNormalizedImage(DD));
+            //    }
+
+            Mat matEnh[3];
+            for (int i = 0; i < 3; ++ i) {
+                matEnh[i] = wiz::enhanceImage(matSrc[i], 64);
+                matEnh[i] = wiz::gaussianFilter16U(matEnh[i], 5, 1);
+                imwrite((viewFolderPath + "/Enhanced" + QString::number(i) + ".tif").toStdString(),
+                        matEnh[i]);
+                matEnh[i] = wiz::applyMaskToImage(matEnh[i], maskCell);
+                imwrite((viewFolderPath + "/EnhancedMasked" + QString::number(i) + ".tif").toStdString(),
+                        matEnh[i]);
+            }
+        }
+
+        // 计算质心
+        std::vector<Point2D> centroids = getConnectedComponentCentroids(maskUlt);
+
+        int kernel_size = 5;
+
+        for (const auto& centroid : centroids) {
+            int x = centroid.x;
+            int y = centroid.y;
+            double valBg[3];
+            for (int i = 0; i < 3; ++ i) {
+                valBg[i] = wiz::calculateAverageGrayValue(matData[AA], maskBg, cv::Point2d(x, y), 512);
+            }
+            double valGrayAA = matData[AA].at<ushort>(y, x) - valBg[AA];
+            double valGrayDA = matData[DA].at<ushort>(y, x) - valBg[DA];
+            double valGrayDD = matData[DD].at<ushort>(y, x) - valBg[DD];
+            // 使用calculator进行计算
+            calculator->loadCorrectedGray(valGrayAA, valGrayDA, valGrayDD);
+            calculator->calcData();
+            if (!calculator->isDataCalculated()) continue;
+            // 获取数据
+            double valEa = calculator->getResult(Ea);
+            double valEd = calculator->getResult(Ed);
+            double valRad = calculator->getResult(Rad);
+            double valRda = calculator->getResult(Rda);
+            double valAest = calculator->getResult(Aest);
+            double valDest = calculator->getResult(Dest);
+            int rectx = x - kernel_size / 2;
+            int recty = y - kernel_size / 2;
+            int rectw = kernel_size;
+            int recth = kernel_size;
+
+            QMap<TableHeader, QString> map;
+            map.insert(TABLE_HEADER_IAA, QString::number(valGrayAA));
+            map.insert(TABLE_HEADER_IDA, QString::number(valGrayDA));
+            map.insert(TABLE_HEADER_IDD, QString::number(valGrayDD));
+            map.insert(TABLE_HEADER_EA, QString::number(valEa));
+            map.insert(TABLE_HEADER_ED, QString::number(valEd));
+            map.insert(TABLE_HEADER_RAD, QString::number(valRad));
+            map.insert(TABLE_HEADER_RDA, QString::number(valRda));
+            map.insert(TABLE_HEADER_AEST, QString::number(valAest));
+            map.insert(TABLE_HEADER_DEST, QString::number(valDest));
+            map.insert(TABLE_HEADER_RECTX, QString::number(rectx));
+            map.insert(TABLE_HEADER_RECTY, QString::number(recty));
+            map.insert(TABLE_HEADER_RECTW, QString::number(rectw));
+            map.insert(TABLE_HEADER_RECTH, QString::number(recth));
+            map.insert(TABLE_HEADER_VIEW, viewName);
+            if (rectx >= 0 && recty >= 0) emit sendData(map);
+        }
     }
+
 }
 
 int FretThaSolver::binData(double min, double max, double interval)
@@ -888,7 +1071,7 @@ void FretThaSolver::autoProcessActivity()
     processGrayToFretData();
     // 进行计算
     performTwoHybridMatlab();
-    performTwoHybridLinear();
+    performTwoHybridLinear(0, 0.5, 2, 5);
     performTwoHybridMatlabBin(0, 5, 0.1);
 }
 

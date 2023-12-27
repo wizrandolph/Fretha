@@ -30,6 +30,18 @@
 #include "fretimageprocessor.h"
 #include "enumerator.h"
 
+// 定义保存坐标的结构体
+struct Point2D {
+    int x;
+    int y;
+};
+
+// 连通域对象
+struct ConnectedComponent {
+    std::vector<Point2D> pixels;
+    Point2D centroid;
+};
+
 
 class FretThaSolver : public QThread
 {
@@ -93,12 +105,16 @@ public:
     void generateRoiFromBatch(QString batchFolderPath);
     void generateRoiFromView(QString viewFolderPath, QString folderName);
     void generateRoiFromImage(QString folderName);
-    void cvExperiment();
+
+    // cv实验
+    void generateRoiNew();
+    void Segmentation();
+    void scorePixel();
 
     // 执行拟合计算
     void performTwoHybridMatlab();  // matlab求解规划
     void performTwoHybridMatlabBin(double min, double max, double interval);
-    void performTwoHybridLinear();  // 线性求解
+    void performTwoHybridLinear(double minSlope , double maxSlope, double minAppro, double maxAppro);  // 线性求解
     // 返回最值
     double maxData(CalcResult dataName);
     double maxBinData(CalcResult dataName);
