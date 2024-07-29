@@ -41,7 +41,7 @@ private:
 
     QImage m_image2Show;
     QString m_currentViewPath; // 当前显示图片的视野的完整绝对路径
-    ShowType m_showType;  // 当前要显示的通道
+    ViewType m_viewType;  // 当前要显示的通道
 
     //图表
     QChartView *m_chartView[6];
@@ -76,9 +76,10 @@ private:
     void trackRect(QModelIndex &index);
 
     void updateResultValue();
-    void updateThaCharts();
-    void updateThaBinCharts();
-    void updateEdRcCharts();
+
+    void updateChartsOurs();
+    void updateChartsBen();
+    void updateChartsDu();
 
     void initializeChart(QChartView* chartView, QString chartName);
     void clearChart(QChartView* chartView);
@@ -88,9 +89,11 @@ private:
 
     void updateRectRecorded(QString viewPath);
 
-    void setupShortcuts();
+    void updateResultsDu();
+    void updateResultsOurs();
+    void updateResultsBen();
 
-    void updateEdRcResults();
+    void setupShortcuts();
 
 
 private slots:
@@ -101,9 +104,10 @@ private slots:
     void on_pushButtonRatio_clicked();
     void on_pushButtonSetRatio_clicked();
 
-    void on_pushButtonEdRc_clicked();
-    void on_pushButtonTHA_clicked();
-    void on_pushButtonBin_clicked();
+    void on_pushButtonDu_clicked();
+    void on_pushButtonOurs_clicked();
+    void on_pushButtonBen_clicked();
+
     void on_pushButtonBinExec_clicked();
     void on_pushButtonUpdateEdRc_clicked();
 
@@ -120,6 +124,13 @@ private slots:
     void on_pushButtonImportScreen_clicked();
 
     void on_pushButtonAutoGen_clicked();
+    void on_pushButtonImportMask_clicked();
+
+    void on_pushButtonClear_clicked();
+
+    void on_ratioButtonLoose_clicked();
+    void on_ratioButtonModerate_clicked();
+    void on_ratioButtonStrict_clicked();
 
     void solveFinished();
     void updateStatusBar(QRectF);
@@ -127,5 +138,6 @@ private slots:
 
     void comboBoxViewTypeChanged(int index);
     void comboBoxDrawModeChanged(int index);
+    void checkBoxBinChanged(int state);
 };
 #endif // MAINWINDOW_H

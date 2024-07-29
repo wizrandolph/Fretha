@@ -1,12 +1,9 @@
 
 #include "mainwindow.h"
-#include "enumerator.h"
 #include <QApplication>
 
 #include <QLocale>
 #include <QTranslator>
-#include <iostream>
-#include <cstdlib>
 #include <QFile>
 #include <QString>
 #include <QTextStream>
@@ -25,7 +22,7 @@ void setDefaultFont(QApplication *app)
 
             //设置字体大小格式为pixel，字体占用固定像素。相同像素的大小屏，不会发生字体遮挡现象
             defaultFont.setFamily(sansCNFamily);
-            defaultFont.setPixelSize(16);
+            defaultFont.setPixelSize(20);
             (app)->setFont(defaultFont);
         }
 
@@ -96,7 +93,8 @@ int main(int argc, char *argv[])
 
     setDefaultFont(&a);
     QString styleSheet;
-    QFile styleFile(":/style/darkblue.qss");
+    // QFile styleFile(":/style/darkblue.qss");
+    QFile styleFile(":/style/modern.qss");
     if (styleFile.open(QFile::ReadOnly)) {
         // 读取样式表内容
         styleSheet = styleFile.readAll();

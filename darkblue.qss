@@ -1,5 +1,5 @@
 QMainWindow {
-    background-color: #262626;
+    background-color: #121212;
 }
 QMainWindow::title {
     color: #FFFFFF;
@@ -15,7 +15,7 @@ QPushButton {
     border-radius: 10px;
     padding: 10px 20px;
     font-family: MiSans;
-    font-size: 16px;
+    font-size: 18px;
 }
 QPushButton:hover {
     background-color: #555555;
@@ -32,7 +32,7 @@ QComboBox {
     border-radius: 10px;
     padding: 10px 20px;
     font-family: MiSans;
-    font-size: 16px;
+    font-size: 18px;
 }
 QComboBox::drop-down {
     border: none;
@@ -55,7 +55,7 @@ QLineEdit {
     font-family: MiSans;
     border-radius: 10px;
     padding: 10px 16px;
-    font-size: 16px;
+    font-size: 18px;
     color: #ffffff;
 }
 QLineEdit:hover, QLineEdit:focus {
@@ -67,15 +67,20 @@ QDoubleSpinBox, QSpinBox {
     border-radius: 10px;
     background-color: #333333;
     padding: 10px 16px;
-    font-size: 16px;
+    font-size: 18px;
     color: #ffffff;
 }
 QDoubleSpinBox:hover, QDoubleSpinBox:focus, QSpinBox:hover, QSpinBox:focus {
     border: 2px solid #45aaf2;
 }
+QCheckBox {
+    color: #ffffff;
+    font-family: MiSans;
+    font-size: 18px;
+}
 QLabel {
     border: 0px solid #45aaf2;
-    font-size: 16px;
+    font-size: 18px;
     font-family: MiSans;
     color: #ffffff;
 }
@@ -99,7 +104,7 @@ QHeaderView::section:horizontal {
     background-color: #333333;
     border: 2px solid #555555;
     font-family: MiSans;
-    font-size: 16px;
+    font-size: 18px;
     color: #ffffff;
     padding: 5px;
 }
@@ -108,7 +113,7 @@ QHeaderView::section:vertical {
     background-color: #333333;
     border: 2px solid #555555;
     font-family: MiSans;
-    font-size: 16px;
+    font-size: 18px;
     color: #ffffff;
     padding: 5px;
 }
@@ -117,7 +122,7 @@ QTableView {
     border: 2px solid #555555;
     border-radius: 10px;
     font-family: MiSans;
-    font-size: 16px;
+    font-size: 18px;
     color: #ffffff;
     selection-background-color: #45aaf2;
     selection-color: #ffffff;
@@ -134,7 +139,7 @@ QProgressBar {
     border: 2px solid #555555;
     border-radius: 10px;
     text-align: center;
-    font-size: 16px;
+    font-size: 18px;
     font-family: MiSans;
     height: 30px;
 }

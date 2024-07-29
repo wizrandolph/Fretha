@@ -26,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) , ui(new Ui::MainW
     // 【用于测试】
     // 用来测试, 省去输入路径的步骤
     if (RUNMODE == RUNMODE_EXPERIMENT || RUNMODE == RUNMODE_DEBUG)
-        ui->lineEditPath->setText("D:\\Files\\FRET\\Data\\MyData\\THA\\Template\\test_data");
+        ui->lineEditPath->setText("D:\\Files\\FRET\\Data\\backup\\test_data");
 }
 
 static bool checkChannelImages(const QString& folderPath)
@@ -46,15 +46,15 @@ static bool checkChannelImages(const QString& folderPath)
     QStringList files = dir.entryList(QDir::Files);
     for (const QString& file : files)
     {
-        if (file.endsWith("DA.tif"))
+        if (file.endsWith("DA.tif") || file.endsWith("DA.tiff"))
         {
             hasDA = true;
         }
-        else if (file.endsWith("DD.tif"))
+        else if (file.endsWith("DD.tif") || file.endsWith("DD.tiff"))
         {
             hasDD = true;
         }
-        else if (file.endsWith("AA.tif"))
+        else if (file.endsWith("AA.tif") || file.endsWith("AA.tiff"))
         {
             hasAA = true;
         }
@@ -95,16 +95,6 @@ void MainWindow::on_pushButtonAuto_clicked()
 
 void MainWindow::solveFinished()
 {
-//    ui->pushButtonBin->setChecked(false);
-//    ui->pushButtonEdRc->setChecked(false);
-//    ui->pushButtonTHA->setChecked(true);
-//    ui->stackedWidget->setCurrentIndex(1);
-//    ui->stackedWidgetResult->setCurrentIndex(0);
-
-//    updateThaCharts();
-//    updateThaBinCharts();
-//    updateEdRcCharts();
-//    updateResultInterface();
     ui->pushButtonAutoGen->setEnabled(true);
     ui->tableRecord->resizeColumnsToContents();
     qDebug() << "[Auto Generate Finished]: Recieved Finished Signals";
@@ -141,19 +131,19 @@ void MainWindow::updateStatusBar(QRectF rect)
     double valEd = fretCalculator->getResult(Ed);
     double valRad = fretCalculator->getResult(Rad);
     double valFc = fretCalculator->getFcValue();
-
-    ui->lineEditStatusGrayAA->setText(QString::number(foreGround[AA]));
-    ui->lineEditStatusGrayDA->setText(QString::number(foreGround[DA]));
-    ui->lineEditStatusGrayDD->setText(QString::number(foreGround[DD]));
-    ui->lineEditBackGroundAA->setText(QString::number(backGround[AA]));
-    ui->lineEditBackGroundDA->setText(QString::number(backGround[DA]));
-    ui->lineEditBackGroundDD->setText(QString::number(backGround[DD]));
     ui->lineEditStatusFretEd->setText(QString::number(valEd));
     ui->lineEditStatusFretFc->setText(QString::number(valFc));
     ui->lineEditStatusFretRc->setText(QString::number(valRad));
-    ui->lineEditStatusSbrAA->setText(QString::number(foreGround[AA] / backGround[AA]));
-    ui->lineEditStatusSbrDA->setText(QString::number(foreGround[DA] / backGround[DA]));
-    ui->lineEditStatusSbrDD->setText(QString::number(foreGround[DD] / backGround[DD]));
+
+    ui->lineEditStatusGrayAA->setText(QString::number(foreGround[CHANNEL_NAME_AA]));
+    ui->lineEditStatusGrayDA->setText(QString::number(foreGround[CHANNEL_NAME_DA]));
+    ui->lineEditStatusGrayDD->setText(QString::number(foreGround[CHANNEL_NAME_DD]));
+    ui->lineEditBackGroundAA->setText(QString::number(backGround[CHANNEL_NAME_AA]));
+    ui->lineEditBackGroundDA->setText(QString::number(backGround[CHANNEL_NAME_DA]));
+    ui->lineEditBackGroundDD->setText(QString::number(backGround[CHANNEL_NAME_DD]));
+    ui->lineEditStatusSbrAA->setText(QString::number(foreGround[CHANNEL_NAME_AA] / backGround[CHANNEL_NAME_AA]));
+    ui->lineEditStatusSbrDA->setText(QString::number(foreGround[CHANNEL_NAME_DA] / backGround[CHANNEL_NAME_DA]));
+    ui->lineEditStatusSbrDD->setText(QString::number(foreGround[CHANNEL_NAME_DD] / backGround[CHANNEL_NAME_DD]));
 }
 
 void MainWindow::receiveData(const QMap<TableHeader, QString> &data)
@@ -166,10 +156,15 @@ void MainWindow::receiveData(const QMap<TableHeader, QString> &data)
 
     int cnt = model->rowCount();
     for (int col = 0; col < 14; ++ col) {
+        // if (data.find((TableHeader)col) == data.end()) {
+        //     continue;
+        // }
         QString str = data[(TableHeader)col];
+        if (str == "") {
+            str = "N/A";
+        }
         model->setItem(cnt, col, new QStandardItem(str));
     }
-    // ui->tableRecord->resizeColumnsToContents();
     model->setRowCount(++ cnt);
     ui->tableRecord->scrollToBottom();
 }
@@ -178,6 +173,9 @@ void MainWindow::on_pushButtonSave_clicked()
 {
     // 使用弹窗获取保存文件夹路径
     QString folderPath = getSaveFolderPath(this);
+    if (folderPath.isEmpty()) {
+        return;
+    }
     QString filePath = fretThaSolver->outputData(folderPath);   // 保存后台数据
     fretThaSolver->outputResults(folderPath);   // 保存后台数据
     m_savePath = folderPath;
@@ -185,63 +183,64 @@ void MainWindow::on_pushButtonSave_clicked()
     // 保存图表文件
     QString filename[6] = {"Ed-Rad图.png",
                            "Ea-Rda图.png",
-                           "Ed-Afree图.png",
-                           "Ea-Dfree图.png",
-                           "Ed-Afree图Bin.png",
-                           "Ea-Dfree图Bin.png"};
-    for (int i = 0; i < 6; i ++)
-    {
+                           "我们的Ed-Afree图.png",
+                           "我们的Ea-Dfree图.png",
+                           "传统的Ed-Afree图.png",
+                           "传统的Ea-Dfree图.png"};
+
+    for (int i = 0; i < 6; i ++) {
         QPixmap pixmap = m_chartView[i]->grab();
         QImage image = pixmap.toImage();
         image.save(folderPath + "/" + filename[i]);
     }
 
-    // exportToCSV(ui->tableRecord, filePath);
-
     // 弹出保存完成提示框
     showAlertDialog("数据已保存到：\n" + filePath);
 }
 
-void MainWindow::on_pushButtonTHA_clicked()
+void MainWindow::on_pushButtonOurs_clicked()
 {
-    ui->pushButtonTHA->setChecked(true);
-    ui->pushButtonBin->setChecked(false);
-    ui->pushButtonEdRc->setChecked(false);
+    ui->pushButtonOurs->setChecked(true);
+    ui->pushButtonBen->setChecked(false);
+    ui->pushButtonDu->setChecked(false);
     ui->stackedWidgetResult->setCurrentIndex(0);
 }
 
-void MainWindow::on_pushButtonBin_clicked()
+void MainWindow::on_pushButtonBen_clicked()
 {
-    ui->pushButtonEdRc->setChecked(false);
-    ui->pushButtonTHA->setChecked(false);
-    ui->pushButtonBin->setChecked(true);
+    ui->pushButtonDu->setChecked(false);
+    ui->pushButtonOurs->setChecked(false);
+    ui->pushButtonBen->setChecked(true);
+
+    updateResultsBen();
+
     ui->stackedWidgetResult->setCurrentIndex(1);
 }
 
-void MainWindow::on_pushButtonEdRc_clicked()
+void MainWindow::on_pushButtonDu_clicked()
 {
-    ui->pushButtonTHA->setChecked(false);
-    ui->pushButtonBin->setChecked(false);
-    ui->pushButtonEdRc->setChecked(true);
+    ui->pushButtonOurs->setChecked(false);
+    ui->pushButtonBen->setChecked(false);
+    ui->pushButtonDu->setChecked(true);
+
+    updateResultsDu();
+
     ui->stackedWidgetResult->setCurrentIndex(2);
 }
 
 void MainWindow::on_pushButtonBinExec_clicked()
 {
-    double min = ui->doubleSpinBoxMin->value(), max = ui->doubleSpinBoxMax->value(), itv = ui->doubleSpinBoxItv->value();
-    fretThaSolver->performTwoHybridMatlabBin(min, max, itv);
-    updateThaBinCharts();
+    updateResultsBen();
 }
 
 void MainWindow::on_pushButtonUpdateEdRc_clicked() {
-    updateEdRcResults();
+    updateResultsDu();
 }
 
 void MainWindow::on_pushButtonHome_clicked()
 {
-    ui->stackedWidget->setCurrentIndex(0);
+    ui->stackedWidget->setCurrentIndex(3);
 }
-
 
 
 void findAllButtons(QLayout *layout, QList<QPushButton *> &buttonList)
@@ -412,19 +411,19 @@ void MainWindow::loadLastRatio()
 }
 
 // 一个简单的由自定义的channel_name映射到QString的函数
-QString getChannelNameString(ShowType type)
+QString getChannelNameString(ViewType type)
 {
     QString channelName;
     switch (type) {
-        case AANORM: {
+        case VIEW_TYPE_AANORM: {
             channelName = "AA.tif";
             break;
         }
-        case DANORM: {
+        case VIEW_TYPE_DANORM: {
             channelName = "DA.tif";
             break;
         }
-        case DDNORM: {
+        case VIEW_TYPE_DDNORM: {
             channelName = "DD.tif";
             break;
         }
@@ -491,9 +490,9 @@ void MainWindow::on_pushButtonAdd_clicked()
     // 如果能够完成数据的计算，那么会向结果列表中添加当前数据
     QModelIndex index = model->index(cnt, 0);
 
-    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[AA] - fretImageProcessor->getBackgroundGray(AA))));
-    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DA] - fretImageProcessor->getBackgroundGray(DA))));
-    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[DD] - fretImageProcessor->getBackgroundGray(DD))));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[CHANNEL_NAME_AA] - fretImageProcessor->getBackgroundGray(CHANNEL_NAME_AA))));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[CHANNEL_NAME_DA] - fretImageProcessor->getBackgroundGray(CHANNEL_NAME_DA))));
+    model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(foreGround[CHANNEL_NAME_DD] - fretImageProcessor->getBackgroundGray(CHANNEL_NAME_DD))));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEd)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valRad)));
     model->setItem(cnt, columnIndex ++, new QStandardItem(QString::number(valEa)));
@@ -657,7 +656,7 @@ void MainWindow::initViewTableModel(QString batchPath)
         // 同时寻找第一个为FRET视野的子文件夹选中
         if (!flag && completeness == "FRET")
         {
-            m_showType = MERGED;
+            m_viewType = VIEW_TYPE_MERGED;
 
             QModelIndex index = model->index(cnt, 0);
             changeView(index);
@@ -790,26 +789,24 @@ void MainWindow::on_pushButtonCalc_clicked()
         double valDD = data.toDouble();
 
         fretThaSolver->expandGrayData(valAA, valDA, valDD);
-
         fretThaSolver->expandFretData(valEd, valEa, valRad, valRda, valAest, valDest);
     }
 
     m_savePath = m_globalPath + "/THA_Result";
 
-    ui->pushButtonBin->setChecked(false);
-    ui->pushButtonEdRc->setChecked(false);
-    ui->pushButtonTHA->setChecked(true);
+    ui->pushButtonBen->setChecked(false);
+    ui->pushButtonDu->setChecked(false);
+    ui->pushButtonOurs->setChecked(true);
 
-    fretThaSolver->performTwoHybridMatlab();
-    fretThaSolver->performTwoHybridMatlabBin(0, 5, 0.1);
-    // fretThaSolver->performTwoHybridLinear();
+    fretThaSolver->performTwoHybridOurs();
+    //fretThaSolver->performTwoHybridBen(0, 5, 0.1);
 
-    updateThaCharts();
-    updateThaBinCharts();
-    // updateEdRcCharts();
+    updateChartsOurs();
+    //updateChartsBen();
+
     updateResultValue();
 
-    updateEdRcResults();
+    //updateResultsDu();
 
     ui->stackedWidget->setCurrentIndex(1);
     ui->stackedWidgetResult->setCurrentIndex(0);
@@ -828,6 +825,7 @@ void MainWindow::on_pushButtonBack_clicked()
     }
 
     fretCalculator->resetData();
+    ui->graphicsView->clearRectItemList();
 
     // 页面跳转
     qDebug() << ui->stackedWidget->currentIndex();
@@ -846,6 +844,10 @@ void MainWindow::on_pushButtonImportScreen_clicked()
 
     // 非测试
     QString csvPath = getOpenCsvFilePath();
+    if (csvPath.isEmpty()) {
+        qDebug() << "[Import Manual Data]:\tFailed: File Path Is Empty";
+        return;
+    }
 
     initRecordTableModel();
     int cnt = model->rowCount();
@@ -885,12 +887,46 @@ void MainWindow::on_pushButtonImportScreen_clicked()
 void MainWindow::on_pushButtonAutoGen_clicked()
 {
     fretThaSolver->setBatchPath(m_globalPath);
-    // showProgressDialog("请等待数据处理...");
+    fretThaSolver->setRunFunction("AutoGen");
+
     connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
     fretThaSolver->start();
     ui->progressBar->setValue(0);
     // m_dialog->exec();
     ui->pushButtonAutoGen->setEnabled(false);
+}
+void MainWindow::on_pushButtonImportMask_clicked()
+{
+    fretThaSolver->setBatchPath(m_globalPath);
+    fretThaSolver->setRunFunction("ImportMask");
+
+    connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
+    fretThaSolver->start();
+    ui->progressBar->setValue(0);
+    // m_dialog->exec();
+    ui->pushButtonAutoGen->setEnabled(false);
+}
+
+void MainWindow::on_pushButtonClear_clicked()
+{
+
+}
+
+
+void MainWindow::on_ratioButtonLoose_clicked()
+{
+
+}
+
+void MainWindow::on_ratioButtonModerate_clicked()
+{
+
+
+}
+
+void MainWindow::on_ratioButtonStrict_clicked()
+{
+
 }
 
 void MainWindow::on_pushButtonDelete_clicked()
@@ -919,27 +955,27 @@ void MainWindow::comboBoxViewTypeChanged(int index)
 
     switch (index) {
         case 0: {
-            m_showType = MERGED;
+            m_viewType = VIEW_TYPE_MERGED;
             break;
         }
         case 1: {
-            m_showType = AANORM;
+            m_viewType = VIEW_TYPE_AANORM;
             break;
         }
         case 2: {
-            m_showType = DANORM;
+            m_viewType = VIEW_TYPE_DANORM;
             break;
         }
         case 3: {
-            m_showType = DDNORM;
+            m_viewType = VIEW_TYPE_DDNORM;
             break;
         }
         case 4: {
-            m_showType = EDPSEU;
+            m_viewType = VIEW_TYPE_EDPSEU;
             break;
         }
         case 5: {
-            m_showType = RCPSEU;
+            m_viewType = VIEW_TYPE_RCPSEU;
             break;
         }
         default: {
@@ -955,11 +991,11 @@ void MainWindow::comboBoxDrawModeChanged(int index)
 {
     switch (index) {
         case 0: {
-            ui->graphicsView->setDrawMode(CropMode);
+            ui->graphicsView->setDrawMode(DRAW_MODE_CROP);
             break;
         }
         case 1: {
-            ui->graphicsView->setDrawMode(StampMode);
+            ui->graphicsView->setDrawMode(DRAW_MODE_STAMP);
             break;
         }
         default: {
@@ -968,31 +1004,37 @@ void MainWindow::comboBoxDrawModeChanged(int index)
     }
 }
 
+
+void MainWindow::checkBoxBinChanged(int state)
+{
+    updateResultsBen();
+}
+
 QImage MainWindow::getImageToShow()
 {
     cv::Mat cvImage;
     QImage qtImage;
 
-    switch (m_showType){
-        case MERGED: {
+    switch (m_viewType){
+        case VIEW_TYPE_MERGED: {
             cvImage= fretImageProcessor->getMergedImage();
             break;
         }
-        case EDPSEU: {
+        case VIEW_TYPE_EDPSEU: {
             fretImageProcessor->preProcessData();
             fretImageProcessor->calcEFret();
             cvImage= fretImageProcessor->getPseuImage(Ed);
             break;
         }
-        case RCPSEU: {
+        case VIEW_TYPE_RCPSEU: {
             fretImageProcessor->preProcessData();
             fretImageProcessor->calcEFret();
             cvImage = fretImageProcessor->getPseuImage(Rad);
             break;
         }
         default: {
-            ChannelName channelName = Enumerator::showTypeToChannelName(m_showType);
-            if (channelName != NaC) {
+            ChannelName channelName = Enumerator::showTypeToChannelName(m_viewType);
+            if (channelName != CHANNEL_NAME_SIZE) {
                 cvImage = fretImageProcessor->getNormalizedImage(channelName);
             }
             break;
@@ -1128,12 +1170,12 @@ void MainWindow::initUICharts()
         assert(m_chartView[i] != nullptr);
     }
     // 向布局中添加图表
-    ui->horizontalLayoutChartP1->insertWidget(0, m_chartView[EdRad]);
-    ui->horizontalLayoutChartP1->insertWidget(1, m_chartView[EaRda]);
-    ui->horizontalLayoutChartP2->insertWidget(0, m_chartView[EdAfree]);
-    ui->horizontalLayoutChartP2->insertWidget(1, m_chartView[EaDfree]);
-    ui->horizontalLayoutChartP3->insertWidget(0, m_chartView[EdAfreeBin]);
-    ui->horizontalLayoutChartP3->insertWidget(1, m_chartView[EaDfreeBin]);
+    ui->horizontalLayoutChartP1->insertWidget(0, m_chartView[CHART_NAME_ED_RAD]);
+    ui->horizontalLayoutChartP1->insertWidget(1, m_chartView[CHART_NAME_EA_RDA]);
+    ui->horizontalLayoutChartP2->insertWidget(0, m_chartView[CHART_NAME_ED_AFREE_OURS]);
+    ui->horizontalLayoutChartP2->insertWidget(1, m_chartView[CHART_NAME_EA_DFREE_OURS]);
+    ui->horizontalLayoutChartP3->insertWidget(0, m_chartView[CHART_NAME_ED_AFREE_BEN]);
+    ui->horizontalLayoutChartP3->insertWidget(1, m_chartView[CHART_NAME_EA_DFREE_BEN]);
 }
 
 /**
@@ -1141,9 +1183,9 @@ void MainWindow::initUICharts()
  */
 void MainWindow::initUI()
 {
-    ui->pushButtonEdRc->setCheckable(true);
-    ui->pushButtonTHA->setCheckable(true);
-    ui->pushButtonBin->setCheckable(true);
+    ui->pushButtonDu->setCheckable(true);
+    ui->pushButtonOurs->setCheckable(true);
+    ui->pushButtonBen->setCheckable(true);
 }
 
 /**
@@ -1178,6 +1220,8 @@ void MainWindow::initSignalsAndSlots()
 
     connect(fretThaSolver, &FretThaSolver::progressChanged, ui->progressBar, &QProgressBar::setValue);
 
+    connect(ui->checkBoxBin, SIGNAL(stateChanged(int)), this, SLOT(checkBoxBinChanged(int)));
+
     // 设置快捷键
     setupShortcuts();
 }
@@ -1185,7 +1229,12 @@ void MainWindow::initSignalsAndSlots()
 void MainWindow::initAllCharts()
 {
     ChartName chartNames[6] = {
-        EdAfree, EaDfree, EdAfreeBin, EaDfreeBin, EdRad, EaRda
+        CHART_NAME_ED_AFREE_OURS,
+        CHART_NAME_EA_DFREE_OURS,
+        CHART_NAME_ED_AFREE_BEN,
+        CHART_NAME_EA_DFREE_BEN,
+        CHART_NAME_ED_RAD,
+        CHART_NAME_EA_RDA
     };
     for (auto it : chartNames) {
         initializeChart(m_chartView[it], Enumerator::chartNameToQString(it));
@@ -1197,55 +1246,59 @@ void MainWindow::initAllCharts()
  */
 void MainWindow::updateResultValue()
 {
-    // 更新THA的结果
-    ui->lineEditEamaxP2->setText(QString::number(fretThaSolver->resultsTha[EAMAX]));
-    ui->lineEditEdmaxP2->setText(QString::number(fretThaSolver->resultsTha[EDMAX]));
-    ui->lineEditNdNaP2->setText(QString::number(fretThaSolver->resultsTha[ND_NA]));
-    ui->lineEditKdeffP2->setText(QString::number(fretThaSolver->resultsTha[KDEFF]));
-    // 更新BIN的结果
-    ui->lineEditEamaxP3->setText(QString::number(fretThaSolver->resultsThaBin[EAMAX]));
-    ui->lineEditEdmaxP3->setText(QString::number(fretThaSolver->resultsThaBin[EDMAX]));
-    ui->lineEditNdNaP3->setText(QString::number(fretThaSolver->resultsThaBin[ND_NA]));
-    ui->lineEditKdeffP3->setText(QString::number(fretThaSolver->resultsThaBin[KDEFF]));
-    // 更新EdRc结果
-    ui->lineEditEamaxEdP1->setText(QString::number(fretThaSolver->resultsEdRad[EAMAX]));
-    ui->lineEditEdmaxEdP1->setText(QString::number(fretThaSolver->resultsEdRad[EDMAX]));
-    ui->lineEditNNEdP1->setText(QString::number(fretThaSolver->resultsEdRad[ND_NA]));
-    ui->lineEditEamaxEaP1->setText(QString::number(fretThaSolver->resultsEaRda[EAMAX]));
-    ui->lineEditEdmaxEaP1->setText(QString::number(fretThaSolver->resultsEaRda[EDMAX]));
-    ui->lineEditNNEaP1->setText(QString::number(fretThaSolver->resultsEaRda[ND_NA]));
-    ui->lineEditEamaxAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[EAMAX] + fretThaSolver->resultsEaRda[EAMAX]) / 2));
-    ui->lineEditEdmaxAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[EDMAX] + fretThaSolver->resultsEaRda[EDMAX]) / 2));
-    ui->lineEditNNAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[ND_NA] + fretThaSolver->resultsEaRda[ND_NA]) / 2));
+    // 更新Ours的结果
+    ui->lineEditEamaxP2->setText(QString::number(fretThaSolver->resultsThaOurs[THA_RESULT_EAMAX]));
+    ui->lineEditEdmaxP2->setText(QString::number(fretThaSolver->resultsThaOurs[THA_RESULT_EDMAX]));
+    ui->lineEditNdNaP2->setText(QString::number(fretThaSolver->resultsThaOurs[THA_RESULT_STOIC]));
+    ui->lineEditKdeffP2->setText(QString::number(fretThaSolver->resultsThaOurs[THA_RESULT_KDEFF]));
+    // 更新Ben的结果
+    ui->lineEditEamaxP3->setText(QString::number(fretThaSolver->resultsThaBen[THA_RESULT_EAMAX]));
+    ui->lineEditEdmaxP3->setText(QString::number(fretThaSolver->resultsThaBen[THA_RESULT_EDMAX]));
+    ui->lineEditNdNaP3->setText(QString::number(fretThaSolver->resultsThaBen[THA_RESULT_STOIC]));
+    ui->lineEditKdeffP3->setText(QString::number(fretThaSolver->resultsThaBen[THA_RESULT_KDEFF]));
+    // 更新Du结果
+    ui->lineEditEamaxEdP1->setText(QString::number(fretThaSolver->resultsEdRad[THA_RESULT_EAMAX]));
+    ui->lineEditEdmaxEdP1->setText(QString::number(fretThaSolver->resultsEdRad[THA_RESULT_EDMAX]));
+    ui->lineEditNNEdP1->setText(QString::number(fretThaSolver->resultsEdRad[THA_RESULT_STOIC]));
+    ui->lineEditEamaxEaP1->setText(QString::number(fretThaSolver->resultsEaRda[THA_RESULT_EAMAX]));
+    ui->lineEditEdmaxEaP1->setText(QString::number(fretThaSolver->resultsEaRda[THA_RESULT_EDMAX]));
+    ui->lineEditNNEaP1->setText(QString::number(fretThaSolver->resultsEaRda[THA_RESULT_STOIC]));
+    ui->lineEditEamaxAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[THA_RESULT_EAMAX] + fretThaSolver->resultsEaRda[THA_RESULT_EAMAX]) / 2));
+    ui->lineEditEdmaxAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[THA_RESULT_EDMAX] + fretThaSolver->resultsEaRda[THA_RESULT_EDMAX]) / 2));
+    ui->lineEditNNAvgP1->setText(QString::number((fretThaSolver->resultsEdRad[THA_RESULT_STOIC] + fretThaSolver->resultsEaRda[THA_RESULT_STOIC]) / 2));
 }
 
 /**
  * @brief MainWindow::updateThaCharts 更新双杂交图
  */
-void MainWindow::updateThaCharts()
+void MainWindow::updateChartsOurs()
 {
     // 清空图标中的数据
-    clearChart(m_chartView[EdAfree]);
-    clearChart(m_chartView[EaDfree]);
+    clearChart(m_chartView[CHART_NAME_ED_AFREE_OURS]);
+    clearChart(m_chartView[CHART_NAME_EA_DFREE_OURS]);
+
+    auto data = fretThaSolver->getDfreeAndAfreeOurs();
 
     // 绘制散点图
-    drawScatter(m_chartView[EdAfree], "Ed-Afree Scatter", fretThaSolver->vecFretData[Afree], fretThaSolver->vecFretData[Ed]);
-    drawScatter(m_chartView[EaDfree], "Ea-Dfree Scatter", fretThaSolver->vecFretData[Dfree], fretThaSolver->vecFretData[Ea]);
+    drawScatter(m_chartView[CHART_NAME_ED_AFREE_OURS], "Ed-Afree Scatter", data.second, fretThaSolver->vecFretData[Ed]);
+    drawScatter(m_chartView[CHART_NAME_EA_DFREE_OURS], "Ea-Dfree Scatter", data.first, fretThaSolver->vecFretData[Ea]);
 
     // 生成线条的点
     std::vector<double> vecAfree, vecDfree, vecEa, vecEd;
-    double maxAfree = fretThaSolver->maxData(Afree),
-        maxDfree = fretThaSolver->maxData(Dfree),
-        maxEa = fretThaSolver->maxData(Ea),
-        maxEd = fretThaSolver->maxData(Ed);
+
+    // 获得数据中的最大值
+    double maxDfree = *std::max_element(data.first.begin(), data.first.end());
+    double maxAfree = *std::max_element(data.second.begin(), data.second.end());
+    double maxEa = fretThaSolver->maxData(Ea);
+    double maxEd = fretThaSolver->maxData(Ed);
 
     // 生成模型上的点
-    int intervals = 100;    // 设置曲线精细度，数值越大，线条越平滑
+    int intervals = 1000;    // 设置曲线精细度，数值越大，线条越平滑
     for (int i = 0; i < intervals; i++) {
         double preAfree = maxAfree / intervals * i;
-        double preEd = fretThaSolver->resultsTha[EDMAX] * preAfree / (preAfree + fretThaSolver->resultsTha[KDEFF] * fretThaSolver->resultsTha[ND_NA]);
+        double preEd = fretThaSolver->resultsThaOurs[THA_RESULT_EDMAX] * preAfree / (preAfree + fretThaSolver->resultsThaOurs[THA_RESULT_KDEFF] * fretThaSolver->resultsThaOurs[THA_RESULT_STOIC]);
         double preDfree = maxDfree / intervals * i;
-        double preEa = fretThaSolver->resultsTha[EAMAX] * preDfree / (preDfree + fretThaSolver->resultsTha[KDEFF]);
+        double preEa = fretThaSolver->resultsThaOurs[THA_RESULT_EAMAX] * preDfree / (preDfree + fretThaSolver->resultsThaOurs[THA_RESULT_KDEFF]);
         vecAfree.push_back(preAfree);
         vecEd.push_back(preEd);
         vecDfree.push_back(preDfree);
@@ -1253,40 +1306,44 @@ void MainWindow::updateThaCharts()
     }
 
     // 绘制曲线
-    drawLine(m_chartView[EdAfree], "Ed-Afree Curve", vecAfree, vecEd);
-    drawLine(m_chartView[EaDfree], "Ea-Dfree Curve", vecDfree, vecEa);
+    drawLine(m_chartView[CHART_NAME_ED_AFREE_OURS], "Ed-Afree Curve", vecAfree, vecEd);
+    drawLine(m_chartView[CHART_NAME_EA_DFREE_OURS], "Ea-Dfree Curve", vecDfree, vecEa);
 
     // 设置坐标轴范围
-    setupChartAxis(m_chartView[EdAfree], "Afree", 0, maxAfree * 1.1, "Ed", 0, maxEd * 1.1);
-    setupChartAxis(m_chartView[EaDfree], "Dfree", 0, maxDfree * 1.1, "Ea", 0, maxEa * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_ED_AFREE_OURS], "Afree", 0, maxAfree * 1.1, "Ed", 0, maxEd * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_EA_DFREE_OURS], "Dfree", 0, maxDfree * 1.1, "Ea", 0, maxEa * 1.1);
 }
 /**
  * @brief MainWindow::updateThaBinCharts 更新数据分箱界面的图表
  */
-void MainWindow::updateThaBinCharts()
+void MainWindow::updateChartsBen()
 {
     // 清空图标中的数据
-    clearChart(m_chartView[EdAfreeBin]);
-    clearChart(m_chartView[EaDfreeBin]);
+    clearChart(m_chartView[CHART_NAME_ED_AFREE_BEN]);
+    clearChart(m_chartView[CHART_NAME_EA_DFREE_BEN]);
+
+    auto data = ui->checkBoxBin->isChecked() ? fretThaSolver->getDfreeAndAfreeBenBin() : fretThaSolver->getDfreeAndAfreeBen();
 
     // 绘制散点图
-    drawScatter(m_chartView[EdAfreeBin], "Ed-Afree Scatter", fretThaSolver->vecFretDataBin[Afree], fretThaSolver->vecFretDataBin[Ed]);
-    drawScatter(m_chartView[EaDfreeBin], "Ea-Dfree Scatter", fretThaSolver->vecFretDataBin[Dfree], fretThaSolver->vecFretDataBin[Ea]);
+    drawScatter(m_chartView[CHART_NAME_ED_AFREE_BEN], "Ed-Afree Scatter", data.second, fretThaSolver->vecFretData[Ed]);
+    drawScatter(m_chartView[CHART_NAME_EA_DFREE_BEN], "Ea-Dfree Scatter", data.first, fretThaSolver->vecFretData[Ea]);
 
     // 生成线条的点
     std::vector<double> vecAfree, vecDfree, vecEa, vecEd;
-    double maxAfree = fretThaSolver->maxBinData(Afree),
-        maxDfree = fretThaSolver->maxBinData(Dfree),
-        maxEa = fretThaSolver->maxBinData(Ea),
-        maxEd = fretThaSolver->maxBinData(Ed);
+
+    // 获得数据中的最大值
+    double maxDfree = *std::max_element(data.first.begin(), data.first.end());
+    double maxAfree = *std::max_element(data.second.begin(), data.second.end());
+    double maxEa = fretThaSolver->maxData(Ea);
+    double maxEd = fretThaSolver->maxData(Ed);
 
     // 生成模型上的点
-    int intervals = 100;    // 设置曲线精细度，数值越大，线条越平滑
+    int intervals = 1000;    // 设置曲线精细度，数值越大，线条越平滑
     for (int i = 0; i < intervals; i++) {
         double preAfree = maxAfree / intervals * i;
-        double preEd = fretThaSolver->resultsThaBin[EDMAX] * preAfree / (preAfree + fretThaSolver->resultsThaBin[KDEFF] * fretThaSolver->resultsThaBin[ND_NA]);
+        double preEd = fretThaSolver->resultsThaBen[THA_RESULT_EDMAX] * preAfree / (preAfree + fretThaSolver->resultsThaBen[THA_RESULT_KDEFF] * fretThaSolver->resultsThaBen[THA_RESULT_STOIC]);
         double preDfree = maxDfree / intervals * i;
-        double preEa = fretThaSolver->resultsThaBin[EAMAX] * preDfree / (preDfree + fretThaSolver->resultsThaBin[KDEFF]);
+        double preEa = fretThaSolver->resultsThaBen[THA_RESULT_EAMAX] * preDfree / (preDfree + fretThaSolver->resultsThaBen[THA_RESULT_KDEFF]);
         vecAfree.push_back(preAfree);
         vecEd.push_back(preEd);
         vecDfree.push_back(preDfree);
@@ -1294,25 +1351,25 @@ void MainWindow::updateThaBinCharts()
     }
 
     // 绘制曲线
-    drawLine(m_chartView[EdAfreeBin], "Ed-Afree Curve", vecAfree, vecEd);
-    drawLine(m_chartView[EaDfreeBin], "Ea-Dfree Curve", vecDfree, vecEa);
+    drawLine(m_chartView[CHART_NAME_ED_AFREE_BEN], "Ed-Afree Curve", vecAfree, vecEd);
+    drawLine(m_chartView[CHART_NAME_EA_DFREE_BEN], "Ea-Dfree Curve", vecDfree, vecEa);
 
     // 设置坐标轴范围
-    setupChartAxis(m_chartView[EdAfreeBin], "Afree", 0, maxAfree * 1.1, "Ed", 0, maxEd * 1.1);
-    setupChartAxis(m_chartView[EaDfreeBin], "Dfree", 0, maxDfree * 1.1, "Ea", 0, maxEa * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_ED_AFREE_BEN], "Afree", 0, maxAfree * 1.1, "Ed", 0, maxEd * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_EA_DFREE_BEN], "Dfree", 0, maxDfree * 1.1, "Ea", 0, maxEa * 1.1);
 }
 /**
  * @brief MainWindow::updateEdRcCharts 更新Ed-RC图
  */
-void MainWindow::updateEdRcCharts()
+void MainWindow::updateChartsDu()
 {
     // 清空图标中的数据
-    clearChart(m_chartView[EdRad]);
-    clearChart(m_chartView[EaRda]);
+    clearChart(m_chartView[CHART_NAME_ED_RAD]);
+    clearChart(m_chartView[CHART_NAME_EA_RDA]);
 
     // 绘制散点图
-    drawScatter(m_chartView[EdRad], "Ed-Rc Scatter", fretThaSolver->vecFretData[Rad], fretThaSolver->vecFretData[Ed]);
-    drawScatter(m_chartView[EaRda], "Ea-1/Rc Scatter", fretThaSolver->vecFretData[Rda], fretThaSolver->vecFretData[Ea]);
+    drawScatter(m_chartView[CHART_NAME_ED_RAD], "Ed-Rc Scatter", fretThaSolver->vecFretData[Rad], fretThaSolver->vecFretData[Ed]);
+    drawScatter(m_chartView[CHART_NAME_EA_RDA], "Ea-1/Rc Scatter", fretThaSolver->vecFretData[Rda], fretThaSolver->vecFretData[Ea]);
 
     // 生成线条的点
     std::vector<double> vecEdSlope, vecRadSlope, vecEdAppro, vecRadAprro,
@@ -1325,22 +1382,26 @@ void MainWindow::updateEdRcCharts()
 
     // 生成模型上的点
     int intervals = 10;    // 设置曲线精细度，数值越大，线条越平滑
-    for (int i = 0; i < intervals; ++ i) {
+    double minAppro = ui->doubleSpinBoxMinAppro->value();
+    double maxAppro = ui->doubleSpinBoxMaxAppro->value();
+    // double minSlope = ui->doubleSpinBoxMinSlope->value();
+    double maxSlope = ui->doubleSpinBoxMaxSlope->value();
+    for (int i = 0; i < intervals + 1; ++ i) {
         // Ed Rc(Rad)
-        double preRadSlope = 1.0 / intervals * i;
-        double preEdSlope = preRadSlope * fretThaSolver->resultsEdRad[EAMAX];
-        double preRadAppro = i * 3.0 / intervals + 1.5;
-        double preEdAppro = fretThaSolver->resultsEdRad[EDMAX];
+        double preRadSlope = maxSlope / intervals * i;
+        double preEdSlope = preRadSlope * fretThaSolver->resultsEdRad[THA_RESULT_EAMAX];
+        double preRadAppro = i * (maxAppro - minAppro) / intervals + minAppro;
+        double preEdAppro = fretThaSolver->resultsEdRad[THA_RESULT_EDMAX];
         vecEdSlope.push_back(preEdSlope);
         vecRadSlope.push_back(preRadSlope);
         vecEdAppro.push_back(preEdAppro);
         vecRadAprro.push_back(preRadAppro);
 
         // Ea 1/Rc(Rda)
-        double preRdaSlope = 1.0 / intervals * i;
-        double preEaSlope = preRdaSlope * fretThaSolver->resultsEaRda[EDMAX];
-        double preRdaAppro = i * 3.0 / intervals + 1.5;
-        double preEaAppro = fretThaSolver->resultsEaRda[EAMAX];
+        double preRdaSlope = maxSlope / intervals * i;
+        double preEaSlope = preRdaSlope * fretThaSolver->resultsEaRda[THA_RESULT_EDMAX];
+        double preRdaAppro = i * (maxAppro - minAppro) / intervals + minAppro;
+        double preEaAppro = fretThaSolver->resultsEaRda[THA_RESULT_EAMAX];
         vecEaSlope.push_back(preEaSlope);
         vecRdaSlope.push_back(preRdaSlope);
         vecEaAppro.push_back(preEaAppro);
@@ -1348,14 +1409,14 @@ void MainWindow::updateEdRcCharts()
     }
 
     // 绘制曲线
-    drawLine(m_chartView[EdRad], "Ed-Rc Approach", vecRadAprro, vecEdAppro);
-    drawLine(m_chartView[EdRad], "Ed-Rc Slope", vecRadSlope, vecEdSlope);
-    drawLine(m_chartView[EaRda], "Ea-1/Rc Approach", vecRdaAprro, vecEaAppro);
-    drawLine(m_chartView[EaRda], "Ea-1/Rc Slope", vecRdaSlope, vecEaSlope);
+    drawLine(m_chartView[CHART_NAME_ED_RAD], "Ed-Rc Approach", vecRadAprro, vecEdAppro);
+    drawLine(m_chartView[CHART_NAME_ED_RAD], "Ed-Rc Slope", vecRadSlope, vecEdSlope);
+    drawLine(m_chartView[CHART_NAME_EA_RDA], "Ea-1/Rc Approach", vecRdaAprro, vecEaAppro);
+    drawLine(m_chartView[CHART_NAME_EA_RDA], "Ea-1/Rc Slope", vecRdaSlope, vecEaSlope);
 
     // 设置坐标轴
-    setupChartAxis(m_chartView[EdRad], "Rc", 0, maxRad * 1.1, "Ed", 0, maxEd * 1.1);
-    setupChartAxis(m_chartView[EaRda], "1/Rc", 0, maxRda * 1.1, "Ea", 0, maxEa * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_ED_RAD], "Rc", 0, maxRad * 1.1, "Ed", 0, maxEd * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_EA_RDA], "1/Rc", 0, maxRda * 1.1, "Ea", 0, maxEa * 1.1);
 }
 /**
  * @brief MainWindow::initializeChart 初始化图表
@@ -1428,7 +1489,7 @@ void MainWindow::drawScatter(QChartView* chartView, QString seriesName, const st
 
     // 设置散点样式
     series->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    series->setMarkerSize(5);
+    series->setMarkerSize(6);
 
     // 添加散点系列到图表
     chart->addSeries(series);
@@ -1566,7 +1627,7 @@ void MainWindow::setupShortcuts()
     });
 }
 
-void MainWindow::updateEdRcResults() {
+void MainWindow::updateResultsDu() {
 
     double
         minSlope = ui->doubleSpinBoxMinSlope->value(),
@@ -1574,8 +1635,31 @@ void MainWindow::updateEdRcResults() {
         minAppro = ui->doubleSpinBoxMinAppro->value(),
         maxAppro = ui->doubleSpinBoxMaxAppro->value();
 
-    fretThaSolver->performTwoHybridLinear(minSlope, maxSlope, minAppro, maxAppro);
-    updateEdRcCharts();
+    fretThaSolver->performTwoHybridDu(minSlope, maxSlope, minAppro, maxAppro);
+    fretThaSolver->performTwoHybridDuAutoRange();
+
+    updateChartsDu();
+    updateResultValue();
+}
+
+void MainWindow::updateResultsOurs()
+{
+    fretThaSolver->performTwoHybridOurs();
+
+    updateChartsOurs();
+    updateResultValue();
+}
+
+void MainWindow::updateResultsBen()
+{
+    bool binFlag = ui->checkBoxBin->isChecked();
+    double
+        min = ui->doubleSpinBoxMin->value(),
+        max = ui->doubleSpinBoxMax->value(),
+        itv = ui->doubleSpinBoxItv->value();
+    fretThaSolver->performTwoHybridBen(min, max, itv, binFlag);
+
+    updateChartsBen();
     updateResultValue();
 }
 

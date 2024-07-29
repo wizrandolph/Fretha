@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/style">
         <file>darkblue.qss</file>
+        <file>modern.qss</file>
     </qresource>
     <qresource prefix="/font">
         <file>MiSans.ttf</file>

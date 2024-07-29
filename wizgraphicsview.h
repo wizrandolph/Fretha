@@ -53,7 +53,7 @@ private:
     QRectF m_sceneRect;
     CursorPosition m_cursorPosition;
 
-    DrawMode m_drawMode = CropMode;
+    DrawMode m_drawMode = DRAW_MODE_CROP;
 
     CursorPosition cursorPosition(const QRectF& cropRect, const QPointF& mousePosition);
     void updateCursorIcon(const QPointF& _mousePosition);

@@ -84,9 +84,9 @@ void FretCalculator::correctData()
 
 void FretCalculator::calcEFret()
 {
-    valFc = valCorr[DA]
-            - ratio[A] * (valCorr[AA] - ratio[C] * valCorr[DD])
-            - ratio[D] * (valCorr[DD] - ratio[B] * valCorr[AA]);
+    valFc = valCorr[CHANNEL_NAME_DA]
+            - ratio[RATIO_NAME_A] * (valCorr[CHANNEL_NAME_AA] - ratio[RATIO_NAME_C] * valCorr[CHANNEL_NAME_DD])
+            - ratio[RATIO_NAME_D] * (valCorr[CHANNEL_NAME_DD] - ratio[RATIO_NAME_B] * valCorr[CHANNEL_NAME_AA]);
 
     if (valFc <= 0) {
         qDebug() << "[Calc E-FRET]:\tNegative Nonsense Fc";
@@ -95,18 +95,18 @@ void FretCalculator::calcEFret()
     }
 
     // ED
-    result[Ed] = valFc / (valFc + ratio[G] * valCorr[DD]);
+    result[Ed] = valFc / (valFc + ratio[RATIO_NAME_G] * valCorr[CHANNEL_NAME_DD]);
     // Rc
-    result[Rad] = ratio[K] * valCorr[AA] / (valFc / ratio[G] + valCorr[DD]);
+    result[Rad] = ratio[RATIO_NAME_K] * valCorr[CHANNEL_NAME_AA] / (valFc / ratio[RATIO_NAME_G] + valCorr[CHANNEL_NAME_DD]);
 
     calcProcess[CALC_DATA] = true;
 }
 
 void FretCalculator::calc3CubeFret()
 {
-    valFc = valCorr[DA]
-            - ratio[A] * (valCorr[AA] - ratio[C] * valCorr[DD])
-            - ratio[D] * (valCorr[DD] - ratio[B] * valCorr[AA]);
+    valFc = valCorr[CHANNEL_NAME_DA]
+            - ratio[RATIO_NAME_A] * (valCorr[CHANNEL_NAME_AA] - ratio[RATIO_NAME_C] * valCorr[CHANNEL_NAME_DD])
+            - ratio[RATIO_NAME_D] * (valCorr[CHANNEL_NAME_DD] - ratio[RATIO_NAME_B] * valCorr[CHANNEL_NAME_AA]);
 
     if (valFc <= 0) {
         qDebug() << "[Calc 3 Cube FRET]:\tNegative Nonsense Fc";
@@ -115,18 +115,18 @@ void FretCalculator::calc3CubeFret()
     }
 
     // EA
-    result[Ea] = valFc * ratio[Y] / (valCorr[AA] * ratio[A]);
+    result[Ea] = valFc * ratio[RATIO_NAME_Y] / (valCorr[CHANNEL_NAME_AA] * ratio[RATIO_NAME_A]);
     // 1/Rc
-    result[Rda] = (valFc / ratio[G] + valCorr[DD]) / (ratio[K] * valCorr[AA]);
+    result[Rda] = (valFc / ratio[RATIO_NAME_G] + valCorr[CHANNEL_NAME_DD]) / (ratio[RATIO_NAME_K] * valCorr[CHANNEL_NAME_AA]);
 
     calcProcess[CALC_DATA] = true;
 }
 void FretCalculator::calc2Hybrid()
 {
     //计算估计浓度
-    double Ma = ratio[G] * ratio[Y] / ratio[D];
-    result[Dest] = ratio[D] * valCorr[DD] / (1 - result[Ed]);
-    result[Aest] = ratio[A] * (valCorr[AA] - ratio[C] * valCorr[DD]) / Ma;
+    double Ma = ratio[RATIO_NAME_G] * ratio[RATIO_NAME_Y] / ratio[RATIO_NAME_D];
+    result[Dest] = ratio[RATIO_NAME_D] * valCorr[CHANNEL_NAME_DD] / (1 - result[Ed]);
+    result[Aest] = ratio[RATIO_NAME_A] * (valCorr[CHANNEL_NAME_AA] - ratio[RATIO_NAME_C] * valCorr[CHANNEL_NAME_DD]) / Ma;
 }
 
 void FretCalculator::calcData()
@@ -160,7 +160,7 @@ bool FretCalculator::isDataCalculated()
 
 void FretCalculator::setRatio(RatioName ratioName, double value)
 {
-    if (ratioName == NaR) {
+    if (ratioName == RATIO_NAME_SIZE) {
         calcProcess[SET_PARAM] = checkParamSet();
         return;
     }
@@ -169,18 +169,18 @@ void FretCalculator::setRatio(RatioName ratioName, double value)
 }
 void FretCalculator::setRatios(double a, double b, double c, double d, double g, double k, double y)
 {
-    setRatio(A, a);
-    setRatio(B, b);
-    setRatio(C, c);
-    setRatio(D, d);
-    setRatio(G, g);
-    setRatio(K, k);
-    setRatio(Y, y);
+    setRatio(RATIO_NAME_A, a);
+    setRatio(RATIO_NAME_B, b);
+    setRatio(RATIO_NAME_C, c);
+    setRatio(RATIO_NAME_D, d);
+    setRatio(RATIO_NAME_G, g);
+    setRatio(RATIO_NAME_K, k);
+    setRatio(RATIO_NAME_Y, y);
 }
 
 void FretCalculator::setExposureTime(ChannelName channelName, double value)
 {
-    if (channelName == NaC) {
+    if (channelName == CHANNEL_NAME_SIZE) {
         calcProcess[SET_PARAM] = checkParamSet();
         return;
     }
@@ -189,39 +189,39 @@ void FretCalculator::setExposureTime(ChannelName channelName, double value)
 }
 void FretCalculator::setExposureTimes(double expsTimeAA, double expsTimeDA, double expsTimeDD)
 {
-    setExposureTime(AA, expsTimeAA);
-    setExposureTime(DA, expsTimeDA);
-    setExposureTime(DD, expsTimeDD);
+    setExposureTime(CHANNEL_NAME_AA, expsTimeAA);
+    setExposureTime(CHANNEL_NAME_DA, expsTimeDA);
+    setExposureTime(CHANNEL_NAME_DD, expsTimeDD);
 }
 
 void FretCalculator::loadBackGray(double I_AA, double I_DA, double I_DD)
 {
-    valBack[AA] = I_AA;
-    valBack[DA] = I_DA;
-    valBack[DD] = I_DD;
+    valBack[CHANNEL_NAME_AA] = I_AA;
+    valBack[CHANNEL_NAME_DA] = I_DA;
+    valBack[CHANNEL_NAME_DD] = I_DD;
     calcProcess[LOAD_DATA] = checkDataLoaded();
 }
 void FretCalculator::loadForeGray(double I_AA, double I_DA, double I_DD)
 {
-    valFore[AA] = I_AA;
-    valFore[DA] = I_DA;
-    valFore[DD] = I_DD;
+    valFore[CHANNEL_NAME_AA] = I_AA;
+    valFore[CHANNEL_NAME_DA] = I_DA;
+    valFore[CHANNEL_NAME_DD] = I_DD;
     calcProcess[LOAD_DATA] = checkDataLoaded();
 }
 void FretCalculator::loadCorrectedGray(double I_AA, double I_DA, double I_DD)
 {
-    valCorr[AA] = I_AA;
-    valCorr[DA] = I_DA;
-    valCorr[DD] = I_DD;
+    valCorr[CHANNEL_NAME_AA] = I_AA;
+    valCorr[CHANNEL_NAME_DA] = I_DA;
+    valCorr[CHANNEL_NAME_DD] = I_DD;
     calcProcess[CORRECT_DATA] = checkDataCorrected();
 }
 
 bool FretCalculator::checkDataLoaded()
 {
-    if (valFore[AA] <= 0 || valFore[DD] <= 0 || valFore[DA] <= 0) {
+    if (valFore[CHANNEL_NAME_AA] <= 0 || valFore[CHANNEL_NAME_DD] <= 0 || valFore[CHANNEL_NAME_DA] <= 0) {
         return false;
     }
-    if (valBack[AA] <= 0 || valBack[DD] <= 0 || valBack[DA] <= 0) {
+    if (valBack[CHANNEL_NAME_AA] <= 0 || valBack[CHANNEL_NAME_DD] <= 0 || valBack[CHANNEL_NAME_DA] <= 0) {
         return false;
     }
     return true;
@@ -229,7 +229,7 @@ bool FretCalculator::checkDataLoaded()
 
 bool FretCalculator::checkDataCorrected()
 {
-    if (valCorr[AA] <= 0 || valCorr[DD] <= 0 || valCorr[DA] <= 0) {
+    if (valCorr[CHANNEL_NAME_AA] <= 0 || valCorr[CHANNEL_NAME_DD] <= 0 || valCorr[CHANNEL_NAME_DA] <= 0) {
         return false;
     }
     return true;
@@ -237,10 +237,10 @@ bool FretCalculator::checkDataCorrected()
 
 bool FretCalculator::checkParamSet()
 {
-    if (ratio[A] <= 0 || ratio[B] <= 0 || ratio[C] <= 0 || ratio[D] <= 0 || ratio[G] <= 0 || ratio[K] <= 0 || ratio[Y]) {
+    if (ratio[RATIO_NAME_A] <= 0 || ratio[RATIO_NAME_B] <= 0 || ratio[RATIO_NAME_C] <= 0 || ratio[RATIO_NAME_D] <= 0 || ratio[RATIO_NAME_G] <= 0 || ratio[RATIO_NAME_K] <= 0 || ratio[RATIO_NAME_Y]) {
         return false;
     }
-    if (exposureTime[AA] <= 0 || exposureTime[DA] <= 0 || exposureTime[DD] <= 0) {
+    if (exposureTime[CHANNEL_NAME_AA] <= 0 || exposureTime[CHANNEL_NAME_DA] <= 0 || exposureTime[CHANNEL_NAME_DD] <= 0) {
         return false;
     }
     return true;
@@ -253,16 +253,16 @@ bool FretCalculator::isSuccess()
 
 void FretCalculator::showParams()
 {
-    qDebug() << "[A]:\t" << ratio[A];
-    qDebug() << "[B]:\t" << ratio[B];
-    qDebug() << "[C]:\t" << ratio[C];
-    qDebug() << "[D]:\t" << ratio[D];
-    qDebug() << "[G]:\t" << ratio[G];
-    qDebug() << "[K]:\t" << ratio[K];
-    qDebug() << "[Y]:\t" << ratio[Y];
-    qDebug() << "[ExpAA]:\t" << exposureTime[AA];
-    qDebug() << "[ExpDA]:\t" << exposureTime[DA];
-    qDebug() << "[ExpDD]:\t" << exposureTime[DD];
+    qDebug() << "[RATIO_NAME_A]:\t" << ratio[RATIO_NAME_A];
+    qDebug() << "[RATIO_NAME_B]:\t" << ratio[RATIO_NAME_B];
+    qDebug() << "[RATIO_NAME_C]:\t" << ratio[RATIO_NAME_C];
+    qDebug() << "[RATIO_NAME_D]:\t" << ratio[RATIO_NAME_D];
+    qDebug() << "[RATIO_NAME_G]:\t" << ratio[RATIO_NAME_G];
+    qDebug() << "[RATIO_NAME_K]:\t" << ratio[RATIO_NAME_K];
+    qDebug() << "[RATIO_NAME_Y]:\t" << ratio[RATIO_NAME_Y];
+    qDebug() << "[ExpAA]:\t" << exposureTime[CHANNEL_NAME_AA];
+    qDebug() << "[ExpDA]:\t" << exposureTime[CHANNEL_NAME_DA];
+    qDebug() << "[ExpDD]:\t" << exposureTime[CHANNEL_NAME_DD];
 }
 
 double FretCalculator::getResult(CalcResult resultName)

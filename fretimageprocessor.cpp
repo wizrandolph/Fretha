@@ -4,10 +4,83 @@
 #include <iostream>
 
 namespace wiz {
+
+    cv::Mat skel(cv::Mat img, cv::Mat element)
+    {
+        cv::Mat skel(img.size(), CV_8UC1, cv::Scalar(0));
+        cv::Mat temp;
+        cv::Mat eroded;
+
+        bool done;
+        do
+        {
+            cv::erode(img, eroded, element);
+            cv::dilate(eroded, temp, element);
+            cv::subtract(img, temp, temp);
+            cv::bitwise_or(skel, temp, skel);
+            eroded.copyTo(img);
+
+            done = (cv::countNonZero(img) == 0);
+        } while (!done);
+
+        return skel;
+    }
     //
+    cv::Mat computeGradientSobel(
+        const cv::Mat& src,
+        int ddepth,
+        int scale,
+        int delta,
+        int kernel_size
+    ) {
+        cv::Mat grad_x, grad_y;
+        cv::Mat abs_grad_x, abs_grad_y;
+
+        // Gradient X
+        cv::Sobel(src, grad_x, ddepth, 1, 0, kernel_size, scale, delta, cv::BORDER_DEFAULT);
+        cv::convertScaleAbs(grad_x, abs_grad_x);
+
+        // Gradient Y
+        cv::Sobel(src, grad_y, ddepth, 0, 1, kernel_size, scale, delta, cv::BORDER_DEFAULT);
+        cv::convertScaleAbs(grad_y, abs_grad_y);
+
+        cv::Mat grad;
+        cv::addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad);
+
+        return grad;
+    }
+
+    cv::Mat computeGradientLaplacian(
+        const cv::Mat& src,
+        int ddepth,
+        int scale,
+        int delta,
+        int kernel_size
+    ) {
+        cv::Mat dst, abs_dst;
+
+        cv::Laplacian(src, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT);
+        cv::convertScaleAbs(dst, abs_dst);
+
+        return abs_dst;
+    }
+
+    cv::Mat computeGradientCanny(
+        const cv::Mat& src,
+        double lowThreshold,
+        int ratio,
+        int kernel_size
+    ) {
+        cv::Mat edges;
+
+        cv::Canny(src, edges, lowThreshold, lowThreshold*ratio, kernel_size);
+
+        return edges;
+    }
+
     cv::Mat getMorphologyClose(const cv::Mat& src, int kernelSize) {
         // 创建一个kernelSize x kernelSize的结构元素
-        cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+        cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
 
         // 进行闭运算
         cv::Mat close;
@@ -17,7 +90,7 @@ namespace wiz {
     }
     cv::Mat getMorphologyOpen(const cv::Mat& src, int kernelSize) {
         // 创建一个kernelSize x kernelSize的结构元素
-        cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+        cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
 
         // 进行开运算
         cv::Mat open;
@@ -28,7 +101,7 @@ namespace wiz {
 
     cv::Mat dilateImage(const cv::Mat& image, int elementSize) {
         // 创建一个结构元素
-        cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(elementSize, elementSize));
+        cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(elementSize, elementSize));
 
         // 膨胀图像
         cv::Mat dilated;
@@ -39,7 +112,7 @@ namespace wiz {
 
     cv::Mat erodeImage(const cv::Mat& image, int elementSize) {
         // 创建一个结构元素
-        cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(elementSize, elementSize));
+        cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(elementSize, elementSize));
 
         // 膨胀图像
         cv::Mat eroded;
@@ -59,9 +132,9 @@ namespace wiz {
 
         //计算直方图
         Mat hist;   //直方图
-        float range[2] = {1, 2000};  //统计灰度值范围
+        float range[2] = {1, 65535};  //统计灰度值范围
         const float* ranges[1] = {range};   //格式需要，指针的指针
-        const int bins[1] = {2000};  //宽度，即直方图的柱数，即横轴的分布
+        const int bins[1] = {65535};  //宽度，即直方图的柱数，即横轴的分布
         calcHist(&mat, 1, 0, Mat(), hist, 1, bins, ranges);  //计算直方图
 
         //直方图求峰值
@@ -308,8 +381,7 @@ namespace wiz {
  * @param mask
  * @return
  */
-    cv::Mat applyMaskToImage(const cv::Mat& image,
-                                                 const cv::Mat& mask)
+    cv::Mat applyMaskToImage(const cv::Mat& image, const cv::Mat& mask)
     {
         CV_Assert(image.type() == CV_8UC1 || image.type() == CV_16UC1 || image.type() == CV_64FC1);
         CV_Assert(mask.type() == CV_8UC1);
@@ -341,8 +413,7 @@ namespace wiz {
         return dst;
     }
 
-    cv::Mat medianFilter16U(const cv::Mat& src,
-                                                int kernelSize) {
+    cv::Mat medianFilter16U(const cv::Mat& src, int kernelSize) {
         cv::Mat dst = cv::Mat::zeros(src.size(), CV_16UC1);
 
         // 检查输入图像的类型和通道数
@@ -356,9 +427,11 @@ namespace wiz {
         return dst;
     }
 
-    cv::Mat gaussianFilter(const cv::Mat& src,
-                                               int kernelSize,
-                                               double sigma) {
+    cv::Mat gaussianFilter(
+    const cv::Mat& src,
+    int kernelSize,
+    double sigma) {
+
         cv::Mat dst;
         cv::GaussianBlur(src, dst, cv::Size(kernelSize, kernelSize), sigma);
         return dst;
@@ -418,13 +491,15 @@ namespace wiz {
      * @return
      */
     cv::Mat localStandardDeviation(const cv::Mat& src,
-                                                       int kernelSize) {
+                                   int kernelSize,
+                                   bool normalize,
+                                   cv::BorderTypes border) {
 
         cv::Mat converted;
         if (src.type() != CV_64FC1) {
             src.convertTo(converted, CV_64FC1);
         } else {
-            src.copyTo(converted, CV_64FC1);
+            src.copyTo(converted);
         }
 
         cv::Mat meanImg, meanImg_pow;
@@ -440,23 +515,26 @@ namespace wiz {
         cv::Mat varianceImg, stdDevImg;    //方差图像
 
         cv::subtract(originalImg_pow_mean, meanImg_pow, varianceImg);
-        // varianceImg.setTo(0, varianceImg < 0);  // 将负值设置为0
         cv::sqrt(varianceImg, stdDevImg);
         stdDevImg.convertTo(stdDevImg, CV_64FC1);
 
         // 计算标准差除以平均值的结果
         cv::Mat result;
-        cv::divide(stdDevImg, meanImg, result);
+        if (normalize) {
+            cv::divide(stdDevImg, meanImg, result);
+        } else {
+            result = stdDevImg;
+        }
 
-//        // 找到非边缘区域的最大值
-//        int border = kernelSize / 2;
-//        double maxVal;
-//        cv::minMaxLoc(result(cv::Rect(border, border, result.cols - 2 * border, result.rows - 2 * border)), NULL, &maxVal);
-//        // 将边缘像素设置为非边缘区域的最大值
-//        result.rowRange(0, border).setTo(maxVal); // top border
-//        result.rowRange(result.rows - border, result.rows).setTo(maxVal); // bottom border
-//        result.colRange(0, border).setTo(maxVal); // left border
-//        result.colRange(result.cols - border, result.cols).setTo(maxVal); // right border
+        // 将边缘区域置为非特征
+        int borderSize = kernelSize;
+        cv::Mat nonEdgeRegion = result(cv::Rect(borderSize, borderSize, result.cols - 2 * borderSize, result.rows - 2 * borderSize));
+        double minVal, maxVal;
+        cv::minMaxLoc(nonEdgeRegion, &minVal, &maxVal);
+        result.rowRange(0, borderSize).setTo(minVal);  // top edge
+        result.rowRange(result.rows - borderSize, result.rows).setTo(minVal);  // bottom edge
+        result.colRange(0, borderSize).setTo(minVal);  // left edge
+        result.colRange(result.cols - borderSize, result.cols).setTo(minVal);  // right edge
 
         return result;
     }
@@ -585,8 +663,8 @@ namespace wiz {
                 bool flag = false;    // 检测是否有0
                 int sum = 0;
                 for (int k = 0; k < 4; ++ k) {
-                    sum += middleMatrixs[k].at<uchar>(i, j);
-                    if (middleMatrixs[k].at<uchar>(i, j) == 0)
+                    sum += middleMatrixs[RATIO_NAME_K].at<uchar>(i, j);
+                    if (middleMatrixs[RATIO_NAME_K].at<uchar>(i, j) == 0)
                         flag = true; // 找到了
                 }
                 if (flag) {
@@ -791,6 +869,52 @@ namespace wiz {
         return dilatedImage;
     }
 
+    cv::Mat fillHoles(const cv::Mat& binImg) {
+        // 克隆输入图像
+        cv::Mat temp = binImg.clone();
+
+        // 反转图像
+        cv::bitwise_not(temp, temp);
+
+        // Floodfill从点(0, 0)开始
+        cv::floodFill(temp, cv::Point(0,0), cv::Scalar(255));
+
+        // 反转图像
+        cv::bitwise_not(temp, temp);
+
+        // 合并填充的洞和原始图像
+        cv::Mat filledImg = (binImg | temp);
+
+        return filledImg;
+    }
+
+    void adaptiveThreshold16(const cv::Mat& src, cv::Mat& dst, double maxValue, int adaptiveMethod, int thresholdType, int blockSize, double C) {
+        cv::Mat mean;
+        if (adaptiveMethod == cv::ADAPTIVE_THRESH_MEAN_C) {
+            cv::blur(src, mean, cv::Size(blockSize, blockSize));
+        } else if (adaptiveMethod == cv::ADAPTIVE_THRESH_GAUSSIAN_C) {
+            mean = gaussianFilter16U(src, blockSize, (blockSize - 1) / 6.0);
+        } else {
+            throw std::invalid_argument("Invalid adaptiveMethod.");
+        }
+
+        // 计算阈值图像
+        cv::Mat thresh;
+        cv::subtract(mean, cv::Scalar(C), thresh);
+
+        // 进行阈值处理
+        if (thresholdType == cv::THRESH_BINARY) {
+            cv::compare(src, thresh, dst, cv::CMP_GT);
+        } else if (thresholdType == cv::THRESH_BINARY_INV) {
+            cv::compare(src, thresh, dst, cv::CMP_LE);
+        } else {
+            throw std::invalid_argument("Only THRESH_BINARY and THRESH_BINARY_INV are supported.");
+        }
+
+        // 将结果乘以最大值
+        dst.convertTo(dst, dst.type(), maxValue);
+    }
+
 } // namespace wiz end
 
 FretImageProcessor::FretImageProcessor()
@@ -800,7 +924,7 @@ FretImageProcessor::FretImageProcessor()
 
 void FretImageProcessor::setRatio(RatioName ratioName, double value)
 {
-    if (ratioName == NaR)
+    if (ratioName == RATIO_NAME_SIZE)
     {
         calcProcess[SET_PARAM] = checkParamSet();
         return;
@@ -810,18 +934,18 @@ void FretImageProcessor::setRatio(RatioName ratioName, double value)
 }
 void FretImageProcessor::setRatios(double a, double b, double c, double d, double g, double k, double y)
 {
-    setRatio(A, a);
-    setRatio(B, b);
-    setRatio(C, c);
-    setRatio(D, d);
-    setRatio(G, g);
-    setRatio(K, k);
-    setRatio(Y, y);
+    setRatio(RATIO_NAME_A, a);
+    setRatio(RATIO_NAME_B, b);
+    setRatio(RATIO_NAME_C, c);
+    setRatio(RATIO_NAME_D, d);
+    setRatio(RATIO_NAME_G, g);
+    setRatio(RATIO_NAME_K, k);
+    setRatio(RATIO_NAME_Y, y);
 }
 
 void FretImageProcessor::setExposureTime(ChannelName channelName, double value)
 {
-    if (channelName == NaC)
+    if (channelName == CHANNEL_NAME_SIZE)
     {
         calcProcess[SET_PARAM] = checkParamSet();
         return;
@@ -832,20 +956,20 @@ void FretImageProcessor::setExposureTime(ChannelName channelName, double value)
 void FretImageProcessor::setExposureTimes(double expsTimeAA,
                                           double expsTimeDA,
                                           double expsTimeDD) {
-    setExposureTime(AA, expsTimeAA);
-    setExposureTime(DA, expsTimeDA);
-    setExposureTime(DD, expsTimeDD);
+    setExposureTime(CHANNEL_NAME_AA, expsTimeAA);
+    setExposureTime(CHANNEL_NAME_DA, expsTimeDA);
+    setExposureTime(CHANNEL_NAME_DD, expsTimeDD);
 }
 
 bool FretImageProcessor::checkDataLoaded() {
-    if (matSrc[AA].empty() || matSrc[DA].empty() || matSrc[DD].empty()) {
+    if (matSrc[CHANNEL_NAME_AA].empty() || matSrc[CHANNEL_NAME_DA].empty() || matSrc[CHANNEL_NAME_DD].empty()) {
         return false;
     }
     return true;
 }
 
 bool FretImageProcessor::checkDataCorrected() {
-    if (matCorr[AA].empty() || matCorr[DD].empty() || matCorr[DA].empty())
+    if (matCorr[CHANNEL_NAME_AA].empty() || matCorr[CHANNEL_NAME_DD].empty() || matCorr[CHANNEL_NAME_DA].empty())
     {
         return false;
     }
@@ -853,10 +977,10 @@ bool FretImageProcessor::checkDataCorrected() {
 }
 
 bool FretImageProcessor::checkParamSet() {
-    if (ratio[A] <= 0 || ratio[B] <= 0 || ratio[C] <= 0 || ratio[D] <= 0 || ratio[G] <= 0 || ratio[K] <= 0 || ratio[Y]) {
+    if (ratio[RATIO_NAME_A] <= 0 || ratio[RATIO_NAME_B] <= 0 || ratio[RATIO_NAME_C] <= 0 || ratio[RATIO_NAME_D] <= 0 || ratio[RATIO_NAME_G] <= 0 || ratio[RATIO_NAME_K] <= 0 || ratio[RATIO_NAME_Y]) {
         return false;
     }
-    if (exposureTime[AA] <= 0 || exposureTime[DA] <= 0 || exposureTime[DD] <= 0) {
+    if (exposureTime[CHANNEL_NAME_AA] <= 0 || exposureTime[CHANNEL_NAME_DA] <= 0 || exposureTime[CHANNEL_NAME_DD] <= 0) {
         return false;
     }
     return true;
@@ -890,41 +1014,41 @@ void FretImageProcessor::loadSourceData(QString folderPath) {
 void FretImageProcessor::loadSourceData(QString pathAA,
                                         QString pathDA,
                                         QString pathDD) {
-    matSrc[AA] = cv::imread(pathAA.toStdString(), -1);
-    matSrc[DA] = cv::imread(pathDA.toStdString(), -1);
-    matSrc[DD] = cv::imread(pathDD.toStdString(), -1);
+    matSrc[CHANNEL_NAME_AA] = cv::imread(pathAA.toStdString(), -1);
+    matSrc[CHANNEL_NAME_DA] = cv::imread(pathDA.toStdString(), -1);
+    matSrc[CHANNEL_NAME_DD] = cv::imread(pathDD.toStdString(), -1);
     calcProcess[LOAD_DATA] = checkDataLoaded();
 }
 
 void FretImageProcessor::preProcessData() {
     using namespace cv;
 
-    // 【计算背景灰度值】
+    // 计算背景灰度值
     double valBack[3];
     for (int i = 0; i < 3; ++ i) {
         valBack[i] = wiz::calcBackgroundGray(matSrc[i]);
     }
-
-    // 【进行背景扣除】
-    correctData(valBack[AA], valBack[DA], valBack[DD]);
-
-    // 【生成掩膜】
-    // Calculate masks for each single channel image
+    // 进行背景扣除
+    correctData(valBack[CHANNEL_NAME_AA], valBack[CHANNEL_NAME_DA], valBack[CHANNEL_NAME_DD]);
+    // 生成掩膜
     Mat maskESC[3]; //Masks for Each Single Channel
     double thre[3];
     for (int i = 0; i < 3; ++ i) {
         thre[i] = 2;
     }
-    threshold(matSrc[AA], maskESC[AA], valBack[AA] * thre[AA], 255, THRESH_BINARY);
-    threshold(matSrc[DA], maskESC[DA], valBack[DA] * thre[DA], 255, THRESH_BINARY);
-    threshold(matSrc[DD], maskESC[DD], valBack[DD] * thre[DD], 255, THRESH_BINARY);
-    // Convert to 8bit
+    threshold(matSrc[CHANNEL_NAME_AA], maskESC[CHANNEL_NAME_AA], valBack[CHANNEL_NAME_AA] * thre[CHANNEL_NAME_AA], 255, THRESH_BINARY);
+    threshold(matSrc[CHANNEL_NAME_DA], maskESC[CHANNEL_NAME_DA], valBack[CHANNEL_NAME_DA] * thre[CHANNEL_NAME_DA], 255, THRESH_BINARY);
+    threshold(matSrc[CHANNEL_NAME_DD], maskESC[CHANNEL_NAME_DD], valBack[CHANNEL_NAME_DD] * thre[CHANNEL_NAME_DD], 255, THRESH_BINARY);
     for (int i = 0; i < 3; ++ i) {
         maskESC[i].convertTo(maskESC[i], CV_8U);
     }
-    // Save to member variable mask
-    bitwise_and(maskESC[AA], maskESC[DA], mask);
-    bitwise_and(mask, maskESC[DD], mask);
+
+    for (int i = 0; i < 3; ++ i) {
+        matCorr[i] = matCorr[i] / exposureTime[i];
+    }
+
+    bitwise_and(maskESC[CHANNEL_NAME_AA], maskESC[CHANNEL_NAME_DA], mask);
+    bitwise_and(mask, maskESC[CHANNEL_NAME_DD], mask);
 }
 
 void FretImageProcessor::correctData(double valBackAA,
@@ -933,9 +1057,9 @@ void FretImageProcessor::correctData(double valBackAA,
     for (int i = 0; i < 3; ++ i) {
         matSrc[i].convertTo(matCorr[i], CV_64F);
     }
-    matCorr[AA] = matCorr[AA] - valBackAA;
-    matCorr[DA] = matCorr[DA] - valBackDA;
-    matCorr[DD] = matCorr[DD] - valBackDD;
+    matCorr[CHANNEL_NAME_AA] = matCorr[CHANNEL_NAME_AA] - valBackAA;
+    matCorr[CHANNEL_NAME_DA] = matCorr[CHANNEL_NAME_DA] - valBackDA;
+    matCorr[CHANNEL_NAME_DD] = matCorr[CHANNEL_NAME_DD] - valBackDD;
     checkDataCorrected();
 }
 
@@ -945,21 +1069,21 @@ void FretImageProcessor::correctData(cv::Mat matBackAA,
     for (int i = 0; i < 3; ++ i) {
         matSrc[i].convertTo(matCorr[i], CV_64F);
     }
-    matCorr[AA] = matCorr[AA] - matBackAA;
-    matCorr[DA] = matCorr[DA] - matBackDA;
-    matCorr[DD] = matCorr[DD] - matBackDD;
+    matCorr[CHANNEL_NAME_AA] = matCorr[CHANNEL_NAME_AA] - matBackAA;
+    matCorr[CHANNEL_NAME_DA] = matCorr[CHANNEL_NAME_DA] - matBackDA;
+    matCorr[CHANNEL_NAME_DD] = matCorr[CHANNEL_NAME_DD] - matBackDD;
 }
 
 void FretImageProcessor::calcEFret() {
 
-    cv::Mat matFc = matCorr[DA]
-                    - ratio[A] * (matCorr[AA] - ratio[C] * matCorr[DD])
-                    - ratio[D] * (matCorr[DD] - ratio[B] * matCorr[AA]);
+    cv::Mat matFc = matCorr[CHANNEL_NAME_DA]
+                    - ratio[RATIO_NAME_A] * (matCorr[CHANNEL_NAME_AA] - ratio[RATIO_NAME_C] * matCorr[CHANNEL_NAME_DD])
+                    - ratio[RATIO_NAME_D] * (matCorr[CHANNEL_NAME_DD] - ratio[RATIO_NAME_B] * matCorr[CHANNEL_NAME_AA]);
 
     // ED
-    matRst[Ed] = matFc / (matFc + ratio[G] * matCorr[DD]);
+    matRst[Ed] = matFc / (matFc + ratio[RATIO_NAME_G] * matCorr[CHANNEL_NAME_DD]);
     // Rc
-    matRst[Rad] = ratio[K] * matCorr[AA] / (matFc / ratio[G] + matCorr[DD]);
+    matRst[Rad] = ratio[RATIO_NAME_K] * matCorr[CHANNEL_NAME_AA] / (matFc / ratio[RATIO_NAME_G] + matCorr[CHANNEL_NAME_DD]);
     if (matRst[Ed].empty() || matRst[Rad].empty()) {
         qDebug() << "E-FRET计算结果为空";
     }
@@ -968,14 +1092,14 @@ void FretImageProcessor::calcEFret() {
 }
 
 void FretImageProcessor::calc3CubeFret() {
-    cv::Mat matFc = matCorr[DA]
-                    - ratio[A] * (matCorr[AA] - ratio[C] * matCorr[DD])
-                    - ratio[D] * (matCorr[DD] - ratio[B] * matCorr[AA]);
+    cv::Mat matFc = matCorr[CHANNEL_NAME_DA]
+                    - ratio[RATIO_NAME_A] * (matCorr[CHANNEL_NAME_AA] - ratio[RATIO_NAME_C] * matCorr[CHANNEL_NAME_DD])
+                    - ratio[RATIO_NAME_D] * (matCorr[CHANNEL_NAME_DD] - ratio[RATIO_NAME_B] * matCorr[CHANNEL_NAME_AA]);
 
     // EA
-    matRst[Ea] = matFc * ratio[Y] / (matCorr[AA] * ratio[A]);
+    matRst[Ea] = matFc * ratio[RATIO_NAME_Y] / (matCorr[CHANNEL_NAME_AA] * ratio[RATIO_NAME_A]);
     // 1/Rc
-    matRst[Rda] = (matFc / ratio[G] + matCorr[DD]) / (ratio[K] * matCorr[AA]);
+    matRst[Rda] = (matFc / ratio[RATIO_NAME_G] + matCorr[CHANNEL_NAME_DD]) / (ratio[RATIO_NAME_K] * matCorr[CHANNEL_NAME_AA]);
 
     calcProcess[CALC_DATA] = true;
 }
@@ -987,9 +1111,9 @@ void FretImageProcessor::calc3CubeFret() {
  */
 void FretImageProcessor::calc2Hybrid() {
     // 计算估计浓度
-    double Ma = ratio[G] * ratio[Y] / ratio[D];
-    matRst[Dest] = ratio[D] * matCorr[DD] / (1 - matRst[Ed]);
-    matRst[Aest] = ratio[A] * (matCorr[AA] - ratio[C] * matCorr[DD]) / Ma;
+    double Ma = ratio[RATIO_NAME_G] * ratio[RATIO_NAME_Y] / ratio[RATIO_NAME_D];
+    matRst[Dest] = ratio[RATIO_NAME_D] * matCorr[CHANNEL_NAME_DD] / (1 - matRst[Ed]);
+    matRst[Aest] = ratio[RATIO_NAME_A] * (matCorr[CHANNEL_NAME_AA] - ratio[RATIO_NAME_C] * matCorr[CHANNEL_NAME_DD]) / Ma;
 }
 
 
@@ -1060,6 +1184,14 @@ double FretImageProcessor::getRoiGrayValue(ChannelName channelName)
     return averageGrayCV;
 }
 
+cv::Mat FretImageProcessor::getRawResult(CalcResult resultName) {
+
+    cv::Mat result = matRst[resultName].clone();
+    wiz::setNegativeToZero(result);
+
+    return result;
+}
+
 /**
  * @brief FretImageProcessor::getMaskedResult
  * 使用掩膜的内容
@@ -1088,12 +1220,13 @@ cv::Mat FretImageProcessor::getMaskedResult8U(CalcResult resultName)
 
 
 
+
 QStringList FretImageProcessor::findImageFiles(const QString& folderPath,
                                                const QString& searchStr) {
     QStringList imageFiles;
     QDir folder(folderPath);
     QStringList filters;
-    filters << "*.tif";
+    filters << "*.tif*";
     folder.setNameFilters(filters);
     folder.setFilter(QDir::Files | QDir::NoSymLinks);
 
@@ -1112,11 +1245,12 @@ QStringList FretImageProcessor::findImageFiles(const QString& folderPath,
 cv::Mat FretImageProcessor::getMergedImage() {
     cv::Mat mergedImage;
     if (calcProcess[LOAD_DATA]) {
+        preProcessData();
         cv::Mat matNorm[3];
         for (int i = 0; i < 3; ++ i) {
             matNorm[i] = wiz::normalizeByZeroMax8U(matSrc[i]);
         }
-        mergedImage = wiz::mergeChannels(matNorm[AA], matNorm[DA], matNorm[DD]);
+        mergedImage = wiz::mergeChannels(matNorm[CHANNEL_NAME_AA], matNorm[CHANNEL_NAME_DA], matNorm[CHANNEL_NAME_DD]);
     }
     return mergedImage;
 }

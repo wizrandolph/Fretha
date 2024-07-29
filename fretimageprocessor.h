@@ -11,6 +11,30 @@
 #include <QDebug>
 
 namespace wiz {
+
+    cv::Mat skel(cv::Mat img, cv::Mat element); // 骨架化
+    // 边缘
+    cv::Mat computeGradientSobel(
+        const cv::Mat& src,
+        int ddepth = CV_16S,
+        int scale = 1,
+        int delta = 0,
+        int kernel_size = 3
+    );
+    cv::Mat computeGradientLaplacian(
+        const cv::Mat& src,
+        int ddepth = CV_16S,
+        int scale = 1,
+        int delta = 0,
+        int kernel_size = 3
+    );
+    cv::Mat computeGradientCanny(
+        const cv::Mat& src,
+        double lowThreshold = 50,
+        int ratio = 3,
+        int kernel_size = 3
+    );
+
     cv::Mat getMorphologyClose(const cv::Mat& src, int kernelSize);
     cv::Mat getMorphologyOpen(const cv::Mat& src, int kernelSize);
 
@@ -33,6 +57,7 @@ namespace wiz {
     cv::Mat normalizeByZeroMax16U(const cv::Mat& image);
     cv::Mat normalize16U(const cv::Mat& image, double min, double max);
 
+    // 应用掩膜
     cv::Mat applyMaskToImage(const cv::Mat& inputImage, const cv::Mat& inputMask);
 
     void setNegativeToZero(cv::Mat& inputImage);
@@ -47,7 +72,7 @@ namespace wiz {
     // 均值滤波
     cv::Mat meanFilter(const cv::Mat& src, int kernelSize);
     cv::Mat meanFilter16U(const cv::Mat& src, int kernelSize);
-    cv::Mat localStandardDeviation(const cv::Mat& src, int kernelSize);
+    cv::Mat localStandardDeviation(const cv::Mat& src, int kernelSize, bool normalize = false, cv::BorderTypes border = cv::BORDER_DEFAULT);
     cv::Mat localStandardDeviationByChat(const cv::Mat& src, int kernelSize);
     // Otsu算法
     double calcOtsuThreshold(const cv::Mat& src);
@@ -69,6 +94,10 @@ namespace wiz {
     double calculateAverageGrayValue(const cv::Mat& grayImage, const cv::Mat& mask, cv::Point center, double distanceLimit);
 
     cv::Mat removeScatter(const cv::Mat& image, int windowSize, double ratio = -1);    // 移除散点
+
+    cv::Mat fillHoles(const cv::Mat& binImg);
+
+    void adaptiveThreshold16(const cv::Mat& src, cv::Mat& dst, double maxValue, int adaptiveMethod, int thresholdType, int blockSize, double C);
 }
 
 class FretImageProcessor
@@ -100,6 +129,7 @@ public:
     void setRoi(double x, double y, double w, double h);
     double getRoiGrayValue(ChannelName);
 
+    cv::Mat getRawResult(CalcResult resultName);
     cv::Mat getMaskedResult(CalcResult resultName);
     cv::Mat getMaskedResult8U(CalcResult resultName);
     cv::Mat getMergedImage();
@@ -113,8 +143,6 @@ public:
 
     static QStringList findImageFiles(const QString& folderPath, const QString& searchStr);
 
-
-
 private:
     QString viewPath;
     bool calcProcess[4];
@@ -122,7 +150,7 @@ private:
     cv::Mat matCorr[3];
     double exposureTime[3];
     double ratio[7];
-    // Ed, Rad, Ea, Rda, Aest, Dest, Afree, Dfree
+    // Ed, Rad, Ea, Rda, Aest, Dest,
     cv::Mat matRst[6];
     cv::Mat matTmp;
     cv::Mat mask;
@@ -130,7 +158,6 @@ private:
     bool checkParamSet();
     bool checkDataLoaded();
     bool checkDataCorrected();
-
 };
 
 #endif // FRETIMAGEPROCESSOR_H

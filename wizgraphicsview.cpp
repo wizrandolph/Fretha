@@ -35,13 +35,13 @@ void WizGraphicsView::setRect(QRectF rect)
 {
     updateRect(rect);
     centerOn(m_rect.center());
-    qDebug() << "[Set Active Rect]:\t" << m_rect;
+    // qDebug() << "[Set Active Rect]:\t" << m_rect;
 }
 
 void WizGraphicsView::setDrawMode(DrawMode drawMode)
 {
     m_drawMode = drawMode;
-    if (m_drawMode == StampMode) {
+    if (m_drawMode == DRAW_MODE_STAMP) {
         setCursor(Qt::CrossCursor);
     }
     else {
@@ -54,7 +54,7 @@ void WizGraphicsView::addItem(QRectF rect)
     QGraphicsRectItem* rectItem = m_scene->addRect(QRectF(0, 0, rect.width(), rect.height()), QPen(Qt::NoPen), QBrush(QColor(69, 170, 242, 128)));
     rectItem->setPos(rect.x(), rect.y());
     m_rectItemsList.append(rectItem);
-    qDebug() << "[AddItem]:\t" << m_rectItemsList.size();
+    // qDebug() << "[AddItem]:\t" << m_rectItemsList.size();
 }
 
 void WizGraphicsView::mousePressEvent(QMouseEvent *event)
@@ -63,16 +63,16 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
 
     // 鼠标右键
     if (event->button() == Qt::RightButton) {
-        qDebug() << "[Mouse Action]:\t" << "RightButton Pressed";
+        // qDebug() << "[Mouse Action]:\t" << "RightButton Pressed";
 
         m_draggingScene = true;
         m_pressStartPosition = event->pos();
         QApplication::setOverrideCursor(Qt::ClosedHandCursor);
     }
     else if (event->button() == Qt::LeftButton) {
-        qDebug() << "[Mouse Action]:\t" << "LeftButton Pressed";
+        // qDebug() << "[Mouse Action]:\t" << "LeftButton Pressed";
 
-        if (m_drawMode == CropMode) {
+        if (m_drawMode == DRAW_MODE_CROP) {
             // 记录鼠标的信息
             m_pressStartPosition = mapToScene(event->pos());
             // 检测创建item时的边界
@@ -97,7 +97,7 @@ void WizGraphicsView::mousePressEvent(QMouseEvent *event)
                 m_resizingRect = true;
             }
         }
-        else if (m_drawMode == StampMode) {
+        else if (m_drawMode == DRAW_MODE_STAMP) {
             m_movingStampRect = true;
 
             // 将鼠标位置视作中心坐标，生成邮戳模式下的矩形
@@ -123,7 +123,7 @@ void WizGraphicsView::mouseMoveEvent(QMouseEvent *event)
     correctPointInsideScene(mousePos);
 
     // 只有鼠标没有被按下的时候，更新鼠标光标
-    if (!m_pressed && m_drawMode == CropMode) {
+    if (!m_pressed && m_drawMode == DRAW_MODE_CROP) {
         QPointF mousePos = mapToScene(event->pos());
         updateCursorIcon(mousePos);
     } else {
@@ -190,7 +190,7 @@ void WizGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     correctRectInteger(m_rect);
     rectToItem();
 
-    qDebug() << "[Mouse Action]:\t" << "Release\n[Current Rect]:\t" << m_rect << m_rectItem->sceneBoundingRect();
+    // qDebug() << "[Mouse Action]:\t" << "Release\n[Current Rect]:\t" << m_rect << m_rectItem->sceneBoundingRect();
 
     // 更新状态
     if (m_draggingScene) {
@@ -259,54 +259,54 @@ void WizGraphicsView::wheelEvent(QWheelEvent *event)
 
 CursorPosition WizGraphicsView::cursorPosition(const QRectF& cropRect, const QPointF& mousePosition)
 {
-    CursorPosition cursorPosition = CursorPositionUndefined;
+    CursorPosition cursorPosition = CURSOR_POSITION_SIZE;
     if (1) {
         // 左上
         if (isPointNearSide(cropRect.top(), mousePosition.y()) &&
             isPointNearSide(cropRect.left(), mousePosition.x())) {
-            cursorPosition = CursorPositionTopLeft;
+            cursorPosition = CURSOR_POSITION_TOPLEFT;
         }
         // 左下
         else if (isPointNearSide(cropRect.bottom(), mousePosition.y()) &&
                  isPointNearSide(cropRect.left(), mousePosition.x())) {
-            cursorPosition = CursorPositionBottomLeft;
+            cursorPosition = CURSOR_POSITION_BOTTOMLEFT;
         }
         // 右上
         else if (isPointNearSide(cropRect.top(), mousePosition.y()) &&
                  isPointNearSide(cropRect.right(), mousePosition.x())) {
-            cursorPosition = CursorPositionTopRight;
+            cursorPosition = CURSOR_POSITION_TOPRIGHT;
         }
         // 右下
         else if (isPointNearSide(cropRect.bottom(), mousePosition.y()) &&
                  isPointNearSide(cropRect.right(), mousePosition.x())) {
-            cursorPosition = CursorPositionBottomRight;
+            cursorPosition = CURSOR_POSITION_BOTTOMRIGHT;
         }
         // 左
         else if (isPointNearSide(cropRect.left(), mousePosition.x()) &&
                  !isPointOutsideRect(cropRect, mousePosition)) {
-            cursorPosition = CursorPositionLeft;
+            cursorPosition = CURSOR_POSITION_LEFT;
         }
         // 右
         else if (isPointNearSide(cropRect.right(), mousePosition.x()) &&
                  !isPointOutsideRect(cropRect, mousePosition)) {
-            cursorPosition = CursorPositionRight;
+            cursorPosition = CURSOR_POSITION_RIGHT;
         }
         // 上
         else if (isPointNearSide(cropRect.top(), mousePosition.y()) &&
                  !isPointOutsideRect(cropRect, mousePosition)) {
-            cursorPosition = CursorPositionTop;
+            cursorPosition = CURSOR_POSITION_TOP;
         }
         // 下
         else if (isPointNearSide(cropRect.bottom(), mousePosition.y()) &&
                  !isPointOutsideRect(cropRect, mousePosition)) {
-            cursorPosition = CursorPositionBottom;
+            cursorPosition = CURSOR_POSITION_BOTTOM;
         }
         // 中间
         else if(cropRect.contains(mousePosition)) {
-            cursorPosition = CursorPositionMiddle;
+            cursorPosition = CURSOR_POSITION_MIDDLE;
         }
         else {
-            cursorPosition = CursorPositionOutside;
+            cursorPosition = CURSOR_POSITION_OUTSIDE;
         }
     }
     return cursorPosition;
@@ -318,31 +318,31 @@ void WizGraphicsView::updateCursorIcon(const QPointF & mousePosition)
     //
     switch (cursorPosition(m_rect, mousePosition))
     {
-        case CursorPositionTopRight:
-        case CursorPositionBottomLeft:
+        case CURSOR_POSITION_TOPRIGHT:
+        case CURSOR_POSITION_BOTTOMLEFT:
             cursorIcon = QCursor(Qt::SizeBDiagCursor);
             break;
-        case CursorPositionTopLeft:
-        case CursorPositionBottomRight:
+        case CURSOR_POSITION_TOPLEFT:
+        case CURSOR_POSITION_BOTTOMRIGHT:
             cursorIcon = QCursor(Qt::SizeFDiagCursor);
             break;
-        case CursorPositionTop:
-        case CursorPositionBottom:
+        case CURSOR_POSITION_TOP:
+        case CURSOR_POSITION_BOTTOM:
             cursorIcon = QCursor(Qt::SizeVerCursor);
             break;
-        case CursorPositionLeft:
-        case CursorPositionRight:
+        case CURSOR_POSITION_LEFT:
+        case CURSOR_POSITION_RIGHT:
             cursorIcon = QCursor(Qt::SizeHorCursor);
             break;
-        case CursorPositionMiddle:
+        case CURSOR_POSITION_MIDDLE:
             cursorIcon = m_resizingRect ?
                              QCursor(Qt::ClosedHandCursor) :
                              QCursor(Qt::OpenHandCursor);
             break;
-        case CursorPositionOutside:
+        case CURSOR_POSITION_OUTSIDE:
             cursorIcon = QCursor(Qt::ArrowCursor);
             break;
-        case CursorPositionUndefined:
+        case CURSOR_POSITION_SIZE:
         default:
             cursorIcon = QCursor(Qt::ArrowCursor);
             break;
@@ -453,7 +453,7 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
 {
     // 根据矩形框的边界位置和鼠标移动距离计算新的矩形框尺寸
     QRectF newRect = m_rect;
-    if (m_cursorPosition == CursorPositionTopLeft) {
+    if (m_cursorPosition == CURSOR_POSITION_TOPLEFT) {
         newRect.setTopLeft(newRect.topLeft() + delta);
         // 限制最小
         if (newRect.height() <= 1) {
@@ -465,7 +465,7 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
             newRect.setLeft(right - 1);
         }
     }
-    else if (m_cursorPosition == CursorPositionTopRight) {
+    else if (m_cursorPosition == CURSOR_POSITION_TOPRIGHT) {
         newRect.setTopRight(newRect.topRight() + delta);
         // 限制最小
         if (newRect.height() <= 1) {
@@ -476,7 +476,7 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
             newRect.setWidth(1);
         }
     }
-    else if (m_cursorPosition == CursorPositionBottomLeft) {
+    else if (m_cursorPosition == CURSOR_POSITION_BOTTOMLEFT) {
         newRect.setBottomLeft(newRect.bottomLeft() + delta);
         // 限制最小
         if (newRect.height() <= 1) {
@@ -487,7 +487,7 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
             newRect.setLeft(right - 1);
         }
     }
-    else if (m_cursorPosition == CursorPositionBottomRight) {
+    else if (m_cursorPosition == CURSOR_POSITION_BOTTOMRIGHT) {
         newRect.setBottomRight(newRect.bottomRight() + delta);
         // 限制最小
         if (newRect.height() <= 1) {
@@ -497,7 +497,7 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
             newRect.setWidth(1);
         }
     }
-    else if (m_cursorPosition == CursorPositionTop) {
+    else if (m_cursorPosition == CURSOR_POSITION_TOP) {
         newRect.setTop(newRect.top() + delta.y());
         // 限制最小
         if (newRect.height() <= 1) {
@@ -505,14 +505,14 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
             newRect.setTop(bottom - 1);
         }
     }
-    else if (m_cursorPosition == CursorPositionBottom) {
+    else if (m_cursorPosition == CURSOR_POSITION_BOTTOM) {
         newRect.setBottom(newRect.bottom() + delta.y());
         // 限制最小
         if (newRect.height() <= 1) {
             newRect.setHeight(1);
         }
     }
-    else if (m_cursorPosition == CursorPositionLeft) {
+    else if (m_cursorPosition == CURSOR_POSITION_LEFT) {
         newRect.setLeft(newRect.left() + delta.x());
         // 限制最小
         if (newRect.width() <= 1) {
@@ -520,7 +520,7 @@ QRectF WizGraphicsView::resizeRect(QPointF delta)
             newRect.setLeft(right - 1);
         }
     }
-    else if (m_cursorPosition == CursorPositionRight) {
+    else if (m_cursorPosition == CURSOR_POSITION_RIGHT) {
         newRect.setRight(newRect.right() + delta.x());
         // 限制最小
         if (newRect.width() <= 1) {

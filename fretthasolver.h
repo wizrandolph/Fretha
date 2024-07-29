@@ -1,4 +1,3 @@
-
 #ifndef FRETTHASOLVER_H
 #define FRETTHASOLVER_H
 
@@ -8,20 +7,7 @@
 #include <QThread>
 #include <QMap>
 
-#include <math.h>
-#include <random>
-#include <time.h>
-#include <stdlib.h>
-#include <algorithm>
 #include <vector>
-#include <numeric>
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <algorithm>
-#include <limits>
-#include <functional>
-#include <iomanip>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -30,17 +16,6 @@
 #include "fretimageprocessor.h"
 #include "enumerator.h"
 
-// 定义保存坐标的结构体
-struct Point2D {
-    int x;
-    int y;
-};
-
-// 连通域对象
-struct ConnectedComponent {
-    std::vector<Point2D> pixels;
-    Point2D centroid;
-};
 
 
 class FretThaSolver : public QThread
@@ -59,43 +34,47 @@ public:
     FretCalculator *calculator = new FretCalculator();  // FRET 数值计算单元
     // 数据变量
     std::vector<double> vecGrayData[3]; // 三个数组，保存灰度值
-    std::vector<double> vecFretData[8]; // 六个数组，保存 FRET 计算结果
-    std::vector<double> vecFretDataBin[8]; // 六个数组，保存分箱后的 FRET 计算结果
-    double resultsTha[4]; // 双杂交求解的参数结果
-    double resultsThaBin[4]; // 分箱以后求解双杂交的参数结果
+    std::vector<double> vecFretData[6]; // 六个数组，保存 FRET 计算结果
+    std::vector<double> vecFretDataBin[6]; // 六个数组，保存分箱后的 FRET 计算结果
+
+    double resultsThaOurs[4]; // 优化的双杂交求解的参数结果
+    double resultsThaBen[4]; // 分箱以后求解双杂交的参数结果
     double resultsEdRad[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
     double resultsEaRda[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
 
     double threshRatio[3] = {3.0, 3.0, 3.0};
-    QString calcFunc = "AutoGenerate";
+    QString m_runFunction;
+
+    Strategy m_strategy = Strategy::MODERATE;
 
 
-    /* 成员方法 *****************************************************************************************/
+    /***********************清除数据*************************/
 
-    // 清除数据
     void clearGrayData();
     void clearFretData();
     void clearFretDataBin();
-    // 保存数据
+
+    /************************输出保存数据***************************/
     QString outputData(QString savePath);
     QString outputResults(QString savePath);
-    // 添加数据
+
     void expandGrayData(double Iaa, double Ida, double Idd);
     void expandFretData(double valEd, double valEa, double valRad, double valRda, double valAest, double valDest);
-    // 设置系数
+
     void setRatio(RatioName ratioName, double value);
     void setRatios(double a, double b, double c, double d, double G, double K, double Y);
-    // 设置曝光时间
     void setExposureTime(ChannelName channelName, double value);
     void setExposureTimes(double expsTimeAA, double expsTimeDA, double expsTimeDD);
-    // 设置信背比阈值系数
+
+
     void setThreshRatio(ChannelName channelName, double value);
     void setThreshRatios(double threshAA, double threshDA, double threshDD);
-    // 设置文件路径
+
+    /******************************设置文件路径***************************/
     void setBatchPath(QString);
-    // 读取数据
     void loadSourceData(QString folderPath);
     void loadSourceData(QString pathAA, QString pathDA, QString pathDD);
+
     // 主要活动
     void processOneView(QString viewFolderPath);
     void processOneBatch(QString batchFolderPath);
@@ -105,35 +84,61 @@ public:
     void generateRoiFromBatch(QString batchFolderPath);
     void generateRoiFromView(QString viewFolderPath, QString folderName);
     void generateRoiFromImage(QString folderName);
+    // 导入mask
+    void loadRoiFromBatch(QString batchFolderPath);
+    void loadRoiFromView(QString viewFolderPath, QString folderName);
+    void loadRoiFromImage(QString folderName);
+
+
+    /*********************************拟合计算函数***********************************/
+    void performTwoHybridOurs();  // Dlib求解规划(优化的版本)
+    void performTwoHybridBen(double min, double max, double interval, bool bin_flag = false);  // 原版求解规划
+    void performTwoHybridDu(double minSlope , double maxSlope, double minAppro, double maxAppro);  // 线性求解
+    void performTwoHybridDuAutoRange();
+
+
+    // 返回最值
+    double maxData(CalcResult dataName);
+    double maxBinData(CalcResult dataName);
+    std::pair<std::vector<double>, std::vector<double>> getDfreeAndAfreeOurs();
+    std::pair<std::vector<double>, std::vector<double>> getDfreeAndAfreeBen();
+    std::pair<std::vector<double>, std::vector<double>> getDfreeAndAfreeBenBin();
+
+
+    void setRunFunction(QString str);
+    void setStrategy(Strategy strategy);
+
+private:
+    /*********************************拟合功能函数********************************/
+
+    double calcSlope(double min, double max, const std::vector<double>& R, const std::vector<double>& E);
+    double calcApproach(double min, double max, const std::vector<double>& R, const std::vector<double>& E);
+    void fitLangmiurDlib();
+    void fitLangmiurMatlab();
+    void fitLangmiurMatlabBin(double min, double max, double interval);  // matlab BIN 求解规划
+    void lab_fitLangmiurMatlabBinCompare(double min, double max, double interval);
+
+    int binDataByRda(double min, double max, double interval);
+    int binDataByRad(double min, double max, double interval);
+    int binDataOurs(double min, double max, double interval);
+
+    void autoProcessActivity();
+    void autoGenerateActivity();
+    void autoImportActivity();
+
+    std::vector<double> getRegionMeans(const cv::Mat& data, const cv::Mat& mask);
 
     // cv实验
     void generateRoiNew();
     void Segmentation();
     void scorePixel();
+    void cellSegmentation();
+    void extractRoiByAdaptiveMask(QString viewName);
+    void extractRoiByFretImage(QString viewName);
+    void extractRoiOrigin(QString viewName);
 
-    // 执行拟合计算
-    void performTwoHybridMatlab();  // matlab求解规划
-    void performTwoHybridMatlabBin(double min, double max, double interval);
-    void performTwoHybridLinear(double minSlope , double maxSlope, double minAppro, double maxAppro);  // 线性求解
-    // 返回最值
-    double maxData(CalcResult dataName);
-    double maxBinData(CalcResult dataName);
-
-    /* 数据处理的子函数*************************************************************************************************/
-
-    // 计算斜率值
-    double calcSlope(double min, double max, const std::vector<double>& R, const std::vector<double>& E);
-    // 计算渐近值
-    double calcApproach(double min, double max, const std::vector<double>& R, const std::vector<double>& E);
-    // 最小二乘法
-    double leastSquare(const std::vector<std::pair<double, double>>& points);
-    // 数据封箱
-    int binData(double min, double max, double interval);
-    // 主活动，在多线程中执行
-    void autoProcessActivity();
-    void autoGenerateActivity();
-
-    void setCalcFunc(QString str);
+    // 自动EdRc
+    double FindBestFittingRange(CalcResult r_type);
 
 protected:
     void run();

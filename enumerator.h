@@ -5,25 +5,40 @@
 #include <QString>
 
 enum RunMode {
-    RUNMODE_DEBUG = -1,
-    RUNMODE_RELEASE = 0,
-    RUNMODE_EXPERIMENT = 1
+    RUNMODE_DEBUG,
+    RUNMODE_RELEASE,
+    RUNMODE_EXPERIMENT,
+    RUNMODE_SIZE
 };
 
-#define RUNMODE 0
+#define RUNMODE RUNMODE_DEBUG
 
 enum ThaResult
 {
-    KDEFF, ND_NA, EAMAX, EDMAX
+    THA_RESULT_KDEFF,
+    THA_RESULT_STOIC,  // ND / NA
+    THA_RESULT_EAMAX,
+    THA_RESULT_EDMAX,
+    THA_RESULT_SIZE
 };
 
 // Channel Name
 enum ChannelName {
-    AA, DA, DD, NaC // NaC means not a channel name
+    CHANNEL_NAME_AA,
+    CHANNEL_NAME_DA,
+    CHANNEL_NAME_DD,
+    CHANNEL_NAME_SIZE // NaC means not a channel name
 };
 
 enum RatioName {
-    A, B, C, D, G, K, Y, NaR    // NaP means "Not a ratio"
+    RATIO_NAME_A,
+    RATIO_NAME_B,
+    RATIO_NAME_C,
+    RATIO_NAME_D,
+    RATIO_NAME_G,
+    RATIO_NAME_K,
+    RATIO_NAME_Y,
+    RATIO_NAME_SIZE    // NaP means "Not a ratio"
 };
 
 enum CalcProcess {
@@ -48,52 +63,63 @@ enum TableHeader {  // 14个
     TABLE_HEADER_RECTY,
     TABLE_HEADER_RECTW,
     TABLE_HEADER_RECTH,
-    TABLE_HEADER_VIEW
+    TABLE_HEADER_VIEW,
+    TABLE_HEADER_SIZE
 };
 
 enum ChartName
 {
-    EdRad,
-    EaRda,
-    EdAfree,
-    EaDfree,
-    EdAfreeBin,
-    EaDfreeBin
+    CHART_NAME_ED_RAD,
+    CHART_NAME_EA_RDA,
+    CHART_NAME_ED_AFREE_OURS,
+    CHART_NAME_EA_DFREE_OURS,
+    CHART_NAME_ED_AFREE_BEN,
+    CHART_NAME_EA_DFREE_BEN,
+    CHART_NAME_SIZE
 };
 
-enum ShowType
+enum ViewType
 {
-    MERGED,
-    AANORM,
-    DANORM,
-    DDNORM,
-    RCPSEU,
-    EDPSEU
+    VIEW_TYPE_MERGED,
+    VIEW_TYPE_AANORM,
+    VIEW_TYPE_DANORM,
+    VIEW_TYPE_DDNORM,
+    VIEW_TYPE_RCPSEU,
+    VIEW_TYPE_EDPSEU,
+    VIEW_TYPE_SIZE
 };
 enum CursorPosition
 {
-    CursorPositionUndefined,
-    CursorPositionMiddle,
-    CursorPositionTop,
-    CursorPositionBottom,
-    CursorPositionLeft,
-    CursorPositionRight,
-    CursorPositionTopLeft,
-    CursorPositionTopRight,
-    CursorPositionBottomLeft,
-    CursorPositionBottomRight,
-    CursorPositionOutside
+    CURSOR_POSITION_MIDDLE,
+    CURSOR_POSITION_TOP,
+    CURSOR_POSITION_BOTTOM,
+    CURSOR_POSITION_LEFT,
+    CURSOR_POSITION_RIGHT,
+    CURSOR_POSITION_TOPLEFT,
+    CURSOR_POSITION_TOPRIGHT,
+    CURSOR_POSITION_BOTTOMLEFT,
+    CURSOR_POSITION_BOTTOMRIGHT,
+    CURSOR_POSITION_OUTSIDE,
+    CURSOR_POSITION_SIZE
 };
 
 enum DrawMode {
-    CropMode, StampMode
+    DRAW_MODE_CROP,
+    DRAW_MODE_STAMP,
+    DRAW_MODE_SIZE
+};
+
+enum class Strategy {
+    LOOSE,
+    MODERATE,
+    STRICT
 };
 
 class Enumerator
 {
 public:
     Enumerator();
-    static ChannelName showTypeToChannelName(ShowType showType);
+    static ChannelName showTypeToChannelName(ViewType viewType);
     static QString chartNameToQString(ChartName chartName);
 };
 
