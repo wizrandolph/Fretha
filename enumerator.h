@@ -11,7 +11,7 @@ enum RunMode {
     RUNMODE_SIZE
 };
 
-#define RUNMODE RUNMODE_DEBUG
+#define RUNMODE RUNMODE_RELEASE
 
 enum ThaResult
 {

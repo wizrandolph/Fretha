@@ -1161,74 +1161,74 @@ void FretThaSolver::loadRoiFromView(QString viewFolderPath, QString folderName)
             mask = wiz::getMorphologyOpen(mask, 3);
         }
 
-        std::vector<WizPoint> centroids = getConnectedComponentMaxValue(mask,
-                                                                        matSrc[CHANNEL_NAME_AA] / valBg[CHANNEL_NAME_AA] + matSrc[CHANNEL_NAME_DA] / valBg[CHANNEL_NAME_DA] + matSrc[CHANNEL_NAME_DD] / valBg[CHANNEL_NAME_DD]);
+        // std::vector<WizPoint> centroids = getConnectedComponentMaxValue(mask,
+        //                                                                 matSrc[CHANNEL_NAME_AA] / valBg[CHANNEL_NAME_AA] + matSrc[CHANNEL_NAME_DA] / valBg[CHANNEL_NAME_DA] + matSrc[CHANNEL_NAME_DD] / valBg[CHANNEL_NAME_DD]);
 
-        int roiSize = 5;
-        for (const WizPoint& centroid : centroids) {
-            int x = centroid.x;
-            int y = centroid.y;
+        // int roiSize = 5;
+        // for (const WizPoint& centroid : centroids) {
+        //     int x = centroid.x;
+        //     int y = centroid.y;
 
-            int rectx = x - roiSize / 2;
-            int recty = y - roiSize / 2;
-            int rectw = roiSize;
-            int recth = roiSize;
+        //     int rectx = x - roiSize / 2;
+        //     int recty = y - roiSize / 2;
+        //     int rectw = roiSize;
+        //     int recth = roiSize;
 
-            int n = matSrc[0].rows;
-            if (!(0 <= rectx && 0 <= rectw && rectx + rectw <= n && 0 <= recty && 0 <= recth && recty + recth <= n)) continue;
+        //     int n = matSrc[0].rows;
+        //     if (!(0 <= rectx && 0 <= rectw && rectx + rectw <= n && 0 <= recty && 0 <= recth && recty + recth <= n)) continue;
 
-            // 计算MatSrc在rect区域的平均灰度值
-            double sbr = 0.0;
-            cv::Rect roi(rectx, recty, rectw, recth);
-            double valFg[3];
-            for (int i = 0; i < 3; ++ i) {
-                Mat matRoi = matSrc[i](roi);
-                Scalar mean = cv::mean(matRoi);
-                valFg[i] = mean.val[0];
+        //     // 计算MatSrc在rect区域的平均灰度值
+        //     double sbr = 0.0;
+        //     cv::Rect roi(rectx, recty, rectw, recth);
+        //     double valFg[3];
+        //     for (int i = 0; i < 3; ++ i) {
+        //         Mat matRoi = matSrc[i](roi);
+        //         Scalar mean = cv::mean(matRoi);
+        //         valFg[i] = mean.val[0];
 
-                sbr += valFg[i] / valBg[i];
-            }
-            if (sbr < 9) continue;
+        //         sbr += valFg[i] / valBg[i];
+        //     }
+        //     if (sbr < 9) continue;
 
-            double valGrayAA = valFg[CHANNEL_NAME_AA] - valBg[CHANNEL_NAME_AA];
-            double valGrayDA = valFg[CHANNEL_NAME_DA] - valBg[CHANNEL_NAME_DA];
-            double valGrayDD = valFg[CHANNEL_NAME_DD] - valBg[CHANNEL_NAME_DD];
+        //     double valGrayAA = valFg[CHANNEL_NAME_AA] - valBg[CHANNEL_NAME_AA];
+        //     double valGrayDA = valFg[CHANNEL_NAME_DA] - valBg[CHANNEL_NAME_DA];
+        //     double valGrayDD = valFg[CHANNEL_NAME_DD] - valBg[CHANNEL_NAME_DD];
 
-            // 使用calculator进行计算
-            calculator->loadCorrectedGray(valGrayAA, valGrayDA, valGrayDD);
-            calculator->calcData();
-            if (!calculator->isDataCalculated()) continue;
-            // 获取数据
-            double valEa = calculator->getResult(Ea);
-            double valEd = calculator->getResult(Ed);
-            double valRad = calculator->getResult(Rad);
-            double valRda = calculator->getResult(Rda);
-            double valAest = calculator->getResult(Aest);
-            double valDest = calculator->getResult(Dest);
+        //     // 使用calculator进行计算
+        //     calculator->loadCorrectedGray(valGrayAA, valGrayDA, valGrayDD);
+        //     calculator->calcData();
+        //     if (!calculator->isDataCalculated()) continue;
+        //     // 获取数据
+        //     double valEa = calculator->getResult(Ea);
+        //     double valEd = calculator->getResult(Ed);
+        //     double valRad = calculator->getResult(Rad);
+        //     double valRda = calculator->getResult(Rda);
+        //     double valAest = calculator->getResult(Aest);
+        //     double valDest = calculator->getResult(Dest);
 
-            if (valEa > 0 && valEd > 0 && valRad > 0 && valRda > 0 && valAest > 0 && valDest > 0) {
-                QMap<TableHeader, QString> map;
-                map.insert(TABLE_HEADER_IAA, QString::number(valGrayAA));
-                map.insert(TABLE_HEADER_IDA, QString::number(valGrayDA));
-                map.insert(TABLE_HEADER_IDD, QString::number(valGrayDD));
-                map.insert(TABLE_HEADER_EA, QString::number(valEa));
-                map.insert(TABLE_HEADER_ED, QString::number(valEd));
-                map.insert(TABLE_HEADER_RAD, QString::number(valRad));
-                map.insert(TABLE_HEADER_RDA, QString::number(valRda));
-                map.insert(TABLE_HEADER_AEST, QString::number(valAest));
-                map.insert(TABLE_HEADER_DEST, QString::number(valDest));
-                map.insert(TABLE_HEADER_RECTX, QString::number(rectx));
-                map.insert(TABLE_HEADER_RECTY, QString::number(recty));
-                map.insert(TABLE_HEADER_RECTW, QString::number(rectw));
-                map.insert(TABLE_HEADER_RECTH, QString::number(recth));
-                map.insert(TABLE_HEADER_VIEW, folderName);
-                if (rectx >= 0 && recty >= 0) emit sendData(map);
-            }
-        }
+        //     if (valEa > 0 && valEd > 0 && valRad > 0 && valRda > 0 && valAest > 0 && valDest > 0) {
+        //         QMap<TableHeader, QString> map;
+        //         map.insert(TABLE_HEADER_IAA, QString::number(valGrayAA));
+        //         map.insert(TABLE_HEADER_IDA, QString::number(valGrayDA));
+        //         map.insert(TABLE_HEADER_IDD, QString::number(valGrayDD));
+        //         map.insert(TABLE_HEADER_EA, QString::number(valEa));
+        //         map.insert(TABLE_HEADER_ED, QString::number(valEd));
+        //         map.insert(TABLE_HEADER_RAD, QString::number(valRad));
+        //         map.insert(TABLE_HEADER_RDA, QString::number(valRda));
+        //         map.insert(TABLE_HEADER_AEST, QString::number(valAest));
+        //         map.insert(TABLE_HEADER_DEST, QString::number(valDest));
+        //         map.insert(TABLE_HEADER_RECTX, QString::number(rectx));
+        //         map.insert(TABLE_HEADER_RECTY, QString::number(recty));
+        //         map.insert(TABLE_HEADER_RECTW, QString::number(rectw));
+        //         map.insert(TABLE_HEADER_RECTH, QString::number(recth));
+        //         map.insert(TABLE_HEADER_VIEW, folderName);
+        //         if (rectx >= 0 && recty >= 0) emit sendData(map);
+        //     }
+        // }
 
 
 
-        /* 提取ROI灰度值
+        // 提取ROI灰度值
 
         // 使用connectedComponents找到所有连通域
         cv::Mat labels;
@@ -1261,12 +1261,39 @@ void FretThaSolver::loadRoiFromView(QString viewFolderPath, QString folderName)
             double valGrayDA = avgs[1][i];
             double valGrayDD = avgs[2][i];
 
+            // 使用calculator进行计算
+            calculator->loadCorrectedGray(valGrayAA, valGrayDA, valGrayDD);
+            calculator->calcData();
+            if (!calculator->isDataCalculated()) continue;
+            // 获取数据
+            double valEa = calculator->getResult(Ea);
+            double valEd = calculator->getResult(Ed);
+            double valRad = calculator->getResult(Rad);
+            double valRda = calculator->getResult(Rda);
+            double valAest = calculator->getResult(Aest);
+            double valDest = calculator->getResult(Dest);
 
-        }*/
+            if (valEa > 0 && valEd > 0 && valRad > 0 && valRda > 0 && valAest > 0 && valDest > 0) {
+                QMap<TableHeader, QString> map;
+                map.insert(TABLE_HEADER_IAA, QString::number(valGrayAA));
+                map.insert(TABLE_HEADER_IDA, QString::number(valGrayDA));
+                map.insert(TABLE_HEADER_IDD, QString::number(valGrayDD));
+                map.insert(TABLE_HEADER_EA, QString::number(valEa));
+                map.insert(TABLE_HEADER_ED, QString::number(valEd));
+                map.insert(TABLE_HEADER_RAD, QString::number(valRad));
+                map.insert(TABLE_HEADER_RDA, QString::number(valRda));
+                map.insert(TABLE_HEADER_AEST, QString::number(valAest));
+                map.insert(TABLE_HEADER_DEST, QString::number(valDest));
+                map.insert(TABLE_HEADER_RECTX, QString::number(1024));
+                map.insert(TABLE_HEADER_RECTY, QString::number(1024));
+                map.insert(TABLE_HEADER_RECTW, QString::number(1));
+                map.insert(TABLE_HEADER_RECTH, QString::number(1));
+                map.insert(TABLE_HEADER_VIEW, folderName);
+                emit sendData(map);
+            }
+        }
 
-
-    }
-    else {
+    } else {
         qDebug() << "[Expand Gray Data]:\tFailed";
     }
 }

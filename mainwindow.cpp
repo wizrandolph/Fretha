@@ -77,6 +77,7 @@ void MainWindow::on_pushButtonBrowse_clicked()
 
 void MainWindow::on_pushButtonAuto_clicked()
 {
+
     QString strPath = ui->lineEditPath->text();
 
     QDir dir(strPath);
@@ -892,7 +893,6 @@ void MainWindow::on_pushButtonAutoGen_clicked()
     connect(fretThaSolver, SIGNAL(thaFinished()), this, SLOT(solveFinished()));
     fretThaSolver->start();
     ui->progressBar->setValue(0);
-    // m_dialog->exec();
     ui->pushButtonAutoGen->setEnabled(false);
 }
 void MainWindow::on_pushButtonImportMask_clicked()
