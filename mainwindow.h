@@ -80,6 +80,7 @@ private:
     void updateChartsOurs();
     void updateChartsBen();
     void updateChartsDu();
+    void updateChartsDuSlope();
 
     void initializeChart(QChartView* chartView, QString chartName);
     void clearChart(QChartView* chartView);

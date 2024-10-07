@@ -33,7 +33,7 @@
        <string notr="true"/>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="pageStart">
        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="3">
@@ -358,7 +358,7 @@
              <string notr="true"/>
             </property>
             <property name="currentIndex">
-             <number>1</number>
+             <number>2</number>
             </property>
             <widget class="QWidget" name="pageTHA">
              <layout class="QVBoxLayout" name="verticalLayout">
@@ -795,7 +795,7 @@
                         <number>2</number>
                        </property>
                        <property name="maximum">
-                        <double>1.000000000000000</double>
+                        <double>100.000000000000000</double>
                        </property>
                        <property name="singleStep">
                         <double>0.010000000000000</double>
@@ -815,7 +815,7 @@
                         <number>2</number>
                        </property>
                        <property name="maximum">
-                        <double>1.000000000000000</double>
+                        <double>100.000000000000000</double>
                        </property>
                        <property name="singleStep">
                         <double>0.010000000000000</double>
@@ -838,7 +838,10 @@
                         <number>2</number>
                        </property>
                        <property name="minimum">
-                        <double>1.000000000000000</double>
+                        <double>0.000000000000000</double>
+                       </property>
+                       <property name="maximum">
+                        <double>100.000000000000000</double>
                        </property>
                        <property name="singleStep">
                         <double>0.010000000000000</double>
@@ -854,10 +857,10 @@
                         <number>2</number>
                        </property>
                        <property name="minimum">
-                        <double>1.000000000000000</double>
+                        <double>0.000000000000000</double>
                        </property>
                        <property name="maximum">
-                        <double>1000.000000000000000</double>
+                        <double>100.000000000000000</double>
                        </property>
                        <property name="singleStep">
                         <double>0.010000000000000</double>

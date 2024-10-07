@@ -224,6 +224,7 @@ void MainWindow::on_pushButtonDu_clicked()
     ui->pushButtonDu->setChecked(true);
 
     updateResultsDu();
+    updateChartsDuSlope();
 
     ui->stackedWidgetResult->setCurrentIndex(2);
 }
@@ -1417,6 +1418,49 @@ void MainWindow::updateChartsDu()
     // 设置坐标轴
     setupChartAxis(m_chartView[CHART_NAME_ED_RAD], "Rc", 0, maxRad * 1.1, "Ed", 0, maxEd * 1.1);
     setupChartAxis(m_chartView[CHART_NAME_EA_RDA], "1/Rc", 0, maxRda * 1.1, "Ea", 0, maxEa * 1.1);
+}
+
+void MainWindow::updateChartsDuSlope()
+{
+    // 清空图标中的数据
+    clearChart(m_chartView[CHART_NAME_ED_RAD]);
+    clearChart(m_chartView[CHART_NAME_EA_RDA]);
+
+    // 绘制散点图
+    drawScatter(m_chartView[CHART_NAME_ED_RAD], "Ed-Rc Scatter", fretThaSolver->vecFretData[Rad], fretThaSolver->vecFretData[Ed]);
+    drawScatter(m_chartView[CHART_NAME_EA_RDA], "Ea-1/Rc Scatter", fretThaSolver->vecFretData[Rda], fretThaSolver->vecFretData[Ea]);
+
+    // 生成线条的点
+    std::vector<double> vecEdSlope, vecRadSlope, vecEaSlope, vecRdaSlope;
+
+    double maxEa = fretThaSolver->maxData(Ea), maxEd = fretThaSolver->maxData(Ed);
+
+    // 生成模型上的点
+    int intervals = 10;    // 设置曲线精细度，数值越大，线条越平滑
+
+    for (int i = 0; i < intervals + 1; ++ i) {
+        // Ed Rc(Rad)
+        double preRadSlope = fretThaSolver->m_result_mean_ratio * 0.8 / intervals * i;
+        double preEdSlope = preRadSlope * fretThaSolver->resultsEdRad[THA_RESULT_EAMAX];
+
+        vecEdSlope.push_back(preEdSlope);
+        vecRadSlope.push_back(preRadSlope);
+
+        // Ea 1/Rc(Rda)
+        double preRdaSlope = 0.8 / fretThaSolver->m_result_mean_ratio / intervals * i;
+        double preEaSlope = preRdaSlope * fretThaSolver->resultsEaRda[THA_RESULT_EDMAX];
+
+        vecEaSlope.push_back(preEaSlope);
+        vecRdaSlope.push_back(preRdaSlope);
+    }
+
+    // 绘制曲线
+    drawLine(m_chartView[CHART_NAME_ED_RAD], "Ed-Rc Slope", vecRadSlope, vecEdSlope);
+    drawLine(m_chartView[CHART_NAME_EA_RDA], "Ea-1/Rc Slope", vecRdaSlope, vecEaSlope);
+
+    // 设置坐标轴
+    setupChartAxis(m_chartView[CHART_NAME_ED_RAD], "Rc", 0, fretThaSolver->m_result_mean_ratio, "Ed", 0, maxEd * 1.1);
+    setupChartAxis(m_chartView[CHART_NAME_EA_RDA], "1/Rc", 0, 1.0 / fretThaSolver->m_result_mean_ratio, "Ea", 0, maxEa * 1.1);
 }
 /**
  * @brief MainWindow::initializeChart 初始化图表

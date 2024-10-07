@@ -41,7 +41,7 @@ public:
     double resultsThaBen[4]; // 分箱以后求解双杂交的参数结果
     double resultsEdRad[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
     double resultsEaRda[4]; // 线性拟合求解的参数结果，注意Kdeff是无效的
-
+    double m_result_auto_edmax, m_result_auto_eamax, m_result_auto_stoic, m_result_mean_ratio; // 自动求解的结果
     double threshRatio[3] = {3.0, 3.0, 3.0};
     QString m_runFunction;
 

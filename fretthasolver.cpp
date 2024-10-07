@@ -987,14 +987,19 @@ void FretThaSolver::performTwoHybridDuAutoRange()
     for (uint i = 0; i < log_rad.size(); ++i) {
         log_rad[i] = std::log(log_rad[i]);
     }
-    double mean_log_da_ratio = std::accumulate(log_rad.begin(), log_rad.end(), 0.0) / log_rad.size();
-    double mean_da_ratios = std::exp(mean_log_da_ratio);
-    double rad_bound = mean_da_ratios * 0.8;
-    double rda_bound = 0.8 * 1.0 / mean_da_ratios;
+    double mean_log_ad_ratio = std::accumulate(log_rad.begin(), log_rad.end(), 0.0) / log_rad.size();
+    double mean_ad_ratio = std::exp(mean_log_ad_ratio);
+    double rad_bound = mean_ad_ratio * 0.5;
+    double rda_bound = 0.5 * 1.0 / mean_ad_ratio;
     double eamax = calcSlope(0, rad_bound, vecFretData[Rad], vecFretData[Ed]);
     double edmax = calcSlope(0, rda_bound, vecFretData[Rda], vecFretData[Ea]);
     qDebug() << "[Rc Bound & 1/Rc Bound]:\t\t" << rad_bound << rda_bound;
     qDebug() << "[Auto EdRc Result]:\t\t" << eamax << edmax << eamax / edmax;
+
+    m_result_auto_edmax = edmax;
+    m_result_auto_eamax = eamax;
+    m_result_auto_stoic = eamax / edmax;
+    m_result_mean_ratio = mean_ad_ratio;
 }
 
 double FretThaSolver::maxData(CalcResult dataName)
